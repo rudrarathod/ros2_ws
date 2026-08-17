@@ -1,0 +1,98 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 78
+    Name: Displays
+    Property Grid State:
+      expanded:
+        - /Grid1
+        - /RobotModel1
+        - /TF1
+        - /TF1/Frames
+        - /LaserScan1
+        - /CameraImage1
+        - /Odometry1
+      split: 150
+    Splitter Ratio: 0.5
+  - Class: rviz_common/Views
+    Expanded: ~
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Line Width: 0.03
+      Name: Grid
+      Normal Cell Count: 0
+      Plane: XY
+      Reference Frame: base_footprint
+    - Class: rviz_default_plugins/RobotModel
+      Description Source: Topic
+      Description Topic: /robot_description
+      Enabled: true
+      Name: RobotModel
+      Visual Enabled: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Frames:
+        All Enabled: false
+        odom:
+          Enabled: false
+        base_footprint:
+          Enabled: false
+        base_link:
+          Enabled: false
+        lidar_link:
+          Enabled: true
+        camera_link:
+          Enabled: false
+        camera_link_optical:
+          Enabled: false
+        imu_link:
+          Enabled: false
+        left_wheel:
+          Enabled: true
+        right_wheel:
+          Enabled: true
+    - Class: rviz_default_plugins/LaserScan
+      Topic: /scan
+      Color Transformer: FlatColor
+      Color: 255; 0; 0
+      Size (Pixels): 3
+      Enabled: true
+      Name: LaserScan
+      Selectable: true
+    - Class: rviz_default_plugins/Image
+      Topic: /camera/image_raw
+      Enabled: true
+      Name: CameraImage
+    - Class: rviz_default_plugins/Odometry
+      Topic: /odom
+      Enabled: true
+      Name: Odometry
+      Keep: 10
+      Color: 0; 255; 0
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_footprint
+    Frame Rate: 30
+  Name: root
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 3.0
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.785
+      Yaw: 0.785
+    Saved: ~

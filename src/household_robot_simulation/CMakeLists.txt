@@ -25,6 +25,18 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install RViz configuration files
+install(
+  DIRECTORY rviz
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# Install bridge configuration files
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Install python scripts
 install(
   PROGRAMS scripts/teleop_keyboard.py
