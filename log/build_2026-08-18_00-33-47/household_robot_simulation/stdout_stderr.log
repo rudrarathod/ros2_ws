@@ -1,0 +1,26 @@
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/rudrarathod/ros2_ws/build/household_robot_simulation
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/simulation.launch.py
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house.sdf
+-- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/urdf/custom_robot.urdf
+-- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/teleop_keyboard.py
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/parent_prefix_path/household_robot_simulation
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.sh
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.dsv
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.bash
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.sh
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.zsh
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.dsv
+-- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.dsv
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/packages/household_robot_simulation
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig.cmake
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig-version.cmake
+-- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.xml

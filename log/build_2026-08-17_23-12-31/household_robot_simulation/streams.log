@@ -1,0 +1,43 @@
+[0.013s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/rudrarathod/ros2_ws/src/household_robot_simulation -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrarathod/ros2_ws/install/household_robot_simulation
+[0.161s] -- The C compiler identification is GNU 13.3.0
+[0.303s] -- The CXX compiler identification is GNU 13.3.0
+[0.322s] -- Detecting C compiler ABI info
+[0.415s] -- Detecting C compiler ABI info - done
+[0.422s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.422s] -- Detecting C compile features
+[0.423s] -- Detecting C compile features - done
+[0.431s] -- Detecting CXX compiler ABI info
+[0.520s] -- Detecting CXX compiler ABI info - done
+[0.528s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.528s] -- Detecting CXX compile features
+[0.529s] -- Detecting CXX compile features - done
+[0.536s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.661s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[0.732s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.857s] -- Configuring done (0.8s)
+[0.859s] -- Generating done (0.0s)
+[0.861s] -- Build files have been written to: /home/rudrarathod/ros2_ws/build/household_robot_simulation
+[0.865s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/rudrarathod/ros2_ws/src/household_robot_simulation -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrarathod/ros2_ws/install/household_robot_simulation
+[0.866s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/rudrarathod/ros2_ws/build/household_robot_simulation -- -j8 -l8
+[0.896s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/rudrarathod/ros2_ws/build/household_robot_simulation -- -j8 -l8
+[0.903s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/rudrarathod/ros2_ws/build/household_robot_simulation
+[0.910s] -- Install configuration: ""
+[0.910s] -- Execute custom install script
+[0.910s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/simulation.launch.py
+[0.918s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house.sdf
+[0.925s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation
+[0.932s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/parent_prefix_path/household_robot_simulation
+[0.938s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.sh
+[0.945s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.dsv
+[0.952s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.sh
+[0.959s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.dsv
+[0.966s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.bash
+[0.972s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.sh
+[0.979s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.zsh
+[0.986s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.dsv
+[0.992s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.dsv
+[1.000s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/packages/household_robot_simulation
+[1.007s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig.cmake
+[1.014s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig-version.cmake
+[1.020s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.xml
+[1.028s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/rudrarathod/ros2_ws/build/household_robot_simulation
