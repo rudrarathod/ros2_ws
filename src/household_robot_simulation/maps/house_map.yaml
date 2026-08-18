@@ -1,4 +1,4 @@
-image: house_map.pgm
+image: /home/rudrarathod/ros2_ws/src/household_robot_simulation/maps/house_map.pgm
 mode: trinary
 resolution: 0.050
 origin: [-4.980, -3.982, 0]

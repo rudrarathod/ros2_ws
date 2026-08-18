@@ -37,6 +37,12 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install map files
+install(
+  DIRECTORY maps
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Install python scripts
 install(
   PROGRAMS

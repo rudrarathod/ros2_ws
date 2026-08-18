@@ -1,10 +1,10 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, TimerAction
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -16,21 +16,30 @@ def generate_launch_description():
     world_file = os.path.join(pkg_share, 'worlds', 'house.sdf')
     urdf_file = os.path.join(pkg_share, 'urdf', 'custom_robot.urdf')
     
-    # Declare launch argument for the world file path
+    # Declare launch arguments
     world_arg = DeclareLaunchArgument(
         'world',
         default_value=world_file,
         description='Path to the SDF world file to load'
     )
     
+    headless_arg = DeclareLaunchArgument(
+        'headless',
+        default_value='false',
+        description='Whether to run Gazebo in headless mode (no GUI)'
+    )
+    
     # Include Gazebo Sim launch file
     # We append ' -r' to run the simulation automatically on startup
+    # If headless is true, we pass -s to run only the server
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(gz_sim_share, 'launch', 'gz_sim.launch.py')
         ),
         launch_arguments={
-            'gz_args': [LaunchConfiguration('world'), ' -r']
+            'gz_args': PythonExpression([
+                '"-s -r " + "', LaunchConfiguration('world'), '" if "', LaunchConfiguration('headless'), '" == "true" else "-r " + "', LaunchConfiguration('world'), '"'
+            ])
         }.items()
     )
     
@@ -68,7 +77,7 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         output='screen',
-        parameters=[{'config_file': bridge_config, 'use_sim_time': True}]
+        parameters=[{'config_file': bridge_config}]
     )
     
     # Path to RViz configuration
@@ -80,61 +89,8 @@ def generate_launch_description():
         executable='rviz2',
         output='screen',
         arguments=['-d', rviz_config],
-        parameters=[{'use_sim_time': True}]
-    )
-    
-    # Static TF Publisher from lidar_link to Gazebo's lumped sensor frame
-    static_tf_lidar = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        arguments=[
-            '--x', '0',
-            '--y', '0',
-            '--z', '0.04',
-            '--yaw', '0',
-            '--pitch', '0',
-            '--roll', '0',
-            '--frame-id', 'lidar_link',
-            '--child-frame-id', 'custom_robot/base_footprint/gpu_lidar'
-        ],
-        parameters=[{'use_sim_time': True}]
-    )
-    
-    # Static TF Publisher from camera_link to Gazebo's lumped sensor frame
-    static_tf_camera = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        arguments=[
-            '--x', '0',
-            '--y', '0',
-            '--z', '0',
-            '--yaw', '0',
-            '--pitch', '0',
-            '--roll', '0',
-            '--frame-id', 'camera_link',
-            '--child-frame-id', 'custom_robot/base_footprint/camera'
-        ],
-        parameters=[{'use_sim_time': True}]
-    )
-    
-    # Static TF Publisher from imu_link to Gazebo's lumped sensor frame
-    static_tf_imu = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        arguments=[
-            '--x', '0',
-            '--y', '0',
-            '--z', '0',
-            '--yaw', '0',
-            '--pitch', '0',
-            '--roll', '0',
-            '--frame-id', 'imu_link',
-            '--child-frame-id', 'custom_robot/base_footprint/imu'
-        ],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': True}],
+        condition=UnlessCondition(LaunchConfiguration('headless'))
     )
     
     # Declare launch argument for enabling SLAM
@@ -142,6 +98,13 @@ def generate_launch_description():
         'slam',
         default_value='true',
         description='Whether to run SLAM (slam_toolbox)'
+    )
+    
+    # Declare launch argument for enabling navigation
+    nav_arg = DeclareLaunchArgument(
+        'nav',
+        default_value='false',
+        description='Whether to run autonomous navigation (Nav2)'
     )
     
     # Path to SLAM config
@@ -161,6 +124,22 @@ def generate_launch_description():
             'use_sim_time': 'true',
             'slam_params_file': slam_config
         }.items()
+    )
+    
+    # Nav2 Autonomous Navigation bringup (delayed by 5s to allow clock to start)
+    navigation = TimerAction(
+        period=5.0,
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(pkg_share, 'launch', 'navigation.launch.py')
+                ),
+                condition=IfCondition(LaunchConfiguration('nav')),
+                launch_arguments={
+                    'use_sim_time': 'true'
+                }.items()
+            )
+        ]
     )
     
     # EKF Node configuration file path
@@ -185,16 +164,16 @@ def generate_launch_description():
     
     return LaunchDescription([
         world_arg,
+        headless_arg,
         slam_arg,
+        nav_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
         bridge,
         rviz,
-        static_tf_lidar,
-        static_tf_camera,
-        static_tf_imu,
         ekf_node,
         safety_filter,
-        slam_toolbox
+        slam_toolbox,
+        navigation
     ])

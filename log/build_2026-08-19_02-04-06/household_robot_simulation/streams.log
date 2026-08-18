@@ -1,0 +1,20 @@
+[0.010s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/rudrarathod/ros2_ws/src/household_robot_simulation -DCMAKE_INSTALL_PREFIX=/home/rudrarathod/ros2_ws/install/household_robot_simulation
+[0.040s] CMake Error at CMakeLists.txt:8 (find_package):
+[0.040s]   By not providing "Findament_cmake.cmake" in CMAKE_MODULE_PATH this project
+[0.040s]   has asked CMake to find a package configuration file provided by
+[0.040s]   "ament_cmake", but CMake did not find one.
+[0.041s] 
+[0.041s]   Could not find a package configuration file provided by "ament_cmake" with
+[0.041s]   any of the following names:
+[0.041s] 
+[0.041s]     ament_cmakeConfig.cmake
+[0.041s]     ament_cmake-config.cmake
+[0.041s] 
+[0.041s]   Add the installation prefix of "ament_cmake" to CMAKE_PREFIX_PATH or set
+[0.041s]   "ament_cmake_DIR" to a directory containing one of the above files.  If
+[0.041s]   "ament_cmake" provides a separate development package or SDK, be sure it
+[0.041s]   has been installed.
+[0.041s] 
+[0.041s] 
+[0.041s] -- Configuring incomplete, errors occurred!
+[0.043s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '1': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/rudrarathod/ros2_ws/src/household_robot_simulation -DCMAKE_INSTALL_PREFIX=/home/rudrarathod/ros2_ws/install/household_robot_simulation

@@ -330,6 +330,9 @@ ament_cmake_symlink_install_directory("/home/rudrarathod/ros2_ws/src/household_r
 # install(DIRECTORY "config" "DESTINATION" "share/household_robot_simulation")
 ament_cmake_symlink_install_directory("/home/rudrarathod/ros2_ws/src/household_robot_simulation" DIRECTORY "config" "DESTINATION" "share/household_robot_simulation")
 
+# install(DIRECTORY "maps" "DESTINATION" "share/household_robot_simulation")
+ament_cmake_symlink_install_directory("/home/rudrarathod/ros2_ws/src/household_robot_simulation" DIRECTORY "maps" "DESTINATION" "share/household_robot_simulation")
+
 # install(PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "DESTINATION" "lib/household_robot_simulation")
 ament_cmake_symlink_install_programs("/home/rudrarathod/ros2_ws/src/household_robot_simulation" PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "DESTINATION" "lib/household_robot_simulation")
 
