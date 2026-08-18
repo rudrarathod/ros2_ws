@@ -41,7 +41,7 @@ install(
 install(
   PROGRAMS
     scripts/teleop_keyboard.py
-    scripts/odom_tf_publisher.py
+    scripts/cmd_vel_safety_filter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

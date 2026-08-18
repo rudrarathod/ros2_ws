@@ -86,6 +86,7 @@
     <!-- Positioned at Y = 0.22 (chassis radius 0.2 + offset) and Z = 0 (relative to base_link) -->
     <origin xyz="0 0.22 0" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="10.0"/>
   </joint>
 
   <!-- ==================== Right Wheel ==================== -->
@@ -115,6 +116,7 @@
     <child link="right_wheel"/>
     <origin xyz="0 -0.22 0" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="10.0"/>
   </joint>
 
   <!-- ==================== Rear Caster Wheel ==================== -->
@@ -211,7 +213,7 @@
       <lidar>
         <scan>
           <horizontal>
-            <samples>360</samples>
+            <samples>720</samples>
             <resolution>1</resolution>
             <min_angle>-3.14159265</min_angle>
             <max_angle>3.14159265</max_angle>
@@ -341,6 +343,20 @@
     <mu2>0.0</mu2>
   </gazebo>
 
+  <!-- Realistic surface friction for left and right wheels -->
+  <gazebo reference="left_wheel">
+    <mu1>1.0</mu1>
+    <mu2>0.8</mu2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <mu1>1.0</mu1>
+    <mu2>0.8</mu2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+  </gazebo>
+
   <!-- Diff-drive and Joint State Publisher plugins -->
   <gazebo>
     <plugin
@@ -359,11 +375,12 @@
       <max_angular_velocity>2.0</max_angular_velocity>
       <min_angular_velocity>-2.0</min_angular_velocity>
       <topic>/cmd_vel</topic>
-      <odom_topic>/odom</odom_topic>
-      <tf_topic>/tf</tf_topic>
+      <odom_topic>/wheel_odom</odom_topic>
+      <tf_topic>/tf_raw</tf_topic>
       <frame_id>odom</frame_id>
       <child_frame_id>base_footprint</child_frame_id>
       <odom_publish_frequency>30</odom_publish_frequency>
+      <publish_odom_tf>false</publish_odom_tf>
     </plugin>
 
     <plugin

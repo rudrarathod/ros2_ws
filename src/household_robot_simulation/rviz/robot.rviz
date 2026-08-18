@@ -14,14 +14,6 @@ Panels:
         - /Map1
       split: 150
     Splitter Ratio: 0.5
-  - Class: rviz_common/Views
-    Help Height: 78
-    Name: Views
-    Property Grid State:
-      expanded:
-        - /Top Down Map View1
-      split: 150
-    Splitter Ratio: 0.5
 Visualization Manager:
   Class: ""
   Displays:
@@ -87,6 +79,10 @@ Visualization Manager:
       Name: Odometry
       Keep: 1
       Color: 0; 255; 0
+    - Class: rviz_default_plugins/Marker
+      Topic: /safety_zone_marker
+      Enabled: true
+      Name: SafetyZone
     - Class: rviz_default_plugins/Map
       Topic: /map
       Update Topic: /map_updates
@@ -101,21 +97,11 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/TopDownOrtho
-      Name: Top Down Map View
+      Target Frame: base_footprint
+      Scale: 100
+      Angle: 0
       Focal Point:
         X: 0
         Y: 0
         Z: 0
-      Scale: 30
-      Target Frame: map
-    Saved:
-      - Class: rviz_default_plugins/Orbit
-        Name: 3D Orbit View
-        Distance: 3.0
-        Focal Point:
-          X: 0
-          Y: 0
-          Z: 0
-        Pitch: 0.785
-        Yaw: 0.785
-        Target Frame: map
+    Saved: ~

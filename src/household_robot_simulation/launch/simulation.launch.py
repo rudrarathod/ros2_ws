@@ -163,10 +163,22 @@ def generate_launch_description():
         }.items()
     )
     
-    # Odom TF Publisher Node
-    odom_tf_publisher = Node(
+    # EKF Node configuration file path
+    ekf_config = os.path.join(pkg_share, 'config', 'ekf.yaml')
+    
+    # EKF Node from robot_localization
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[ekf_config, {'use_sim_time': True}]
+    )
+
+    # Safety Filter Node
+    safety_filter = Node(
         package='household_robot_simulation',
-        executable='odom_tf_publisher.py',
+        executable='cmd_vel_safety_filter.py',
         output='screen',
         parameters=[{'use_sim_time': True}]
     )
@@ -182,6 +194,7 @@ def generate_launch_description():
         static_tf_lidar,
         static_tf_camera,
         static_tf_imu,
-        odom_tf_publisher,
+        ekf_node,
+        safety_filter,
         slam_toolbox
     ])
