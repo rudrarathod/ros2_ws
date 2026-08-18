@@ -7,25 +7,20 @@ Panels:
         - /Grid1
         - /RobotModel1
         - /TF1
-        - /TF1/Frames
         - /LaserScan1
         - /CameraImage1
         - /Odometry1
       split: 150
     Splitter Ratio: 0.5
-  - Class: rviz_common/Views
-    Expanded: ~
-    Name: Views
-    Splitter Ratio: 0.5
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
+    - Alpha: 0.15
       Cell Size: 1
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 160
       Enabled: true
-      Line Width: 0.03
+      Line Width: 0.01
       Name: Grid
       Normal Cell Count: 0
       Plane: XY
@@ -39,6 +34,7 @@ Visualization Manager:
     - Class: rviz_default_plugins/TF
       Enabled: true
       Name: TF
+      Marker Scale: 0.3
       Show Arrows: true
       Show Axes: true
       Show Names: false
@@ -66,7 +62,7 @@ Visualization Manager:
       Topic: /scan
       Color Transformer: FlatColor
       Color: 255; 0; 0
-      Size (Pixels): 3
+      Size (Pixels): 2
       Enabled: true
       Name: LaserScan
       Selectable: true
@@ -78,10 +74,10 @@ Visualization Manager:
       Topic: /odom
       Enabled: true
       Name: Odometry
-      Keep: 10
+      Keep: 1
       Color: 0; 255; 0
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 30; 30; 30
     Fixed Frame: base_footprint
     Frame Rate: 30
   Name: root
