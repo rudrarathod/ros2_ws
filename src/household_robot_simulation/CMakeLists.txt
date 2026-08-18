@@ -39,7 +39,9 @@ install(
 
 # Install python scripts
 install(
-  PROGRAMS scripts/teleop_keyboard.py
+  PROGRAMS
+    scripts/teleop_keyboard.py
+    scripts/odom_tf_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

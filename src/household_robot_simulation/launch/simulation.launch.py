@@ -2,6 +2,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -42,7 +43,7 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',
-        parameters=[{'robot_description': robot_desc}]
+        parameters=[{'robot_description': robot_desc, 'use_sim_time': True}]
     )
     
     # Gazebo Sim Spawn Node (spawns the robot from /robot_description topic)
@@ -67,7 +68,7 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         output='screen',
-        parameters=[{'config_file': bridge_config}]
+        parameters=[{'config_file': bridge_config, 'use_sim_time': True}]
     )
     
     # Path to RViz configuration
@@ -78,7 +79,8 @@ def generate_launch_description():
         package='rviz2',
         executable='rviz2',
         output='screen',
-        arguments=['-d', rviz_config]
+        arguments=['-d', rviz_config],
+        parameters=[{'use_sim_time': True}]
     )
     
     # Static TF Publisher from lidar_link to Gazebo's lumped sensor frame
@@ -95,10 +97,11 @@ def generate_launch_description():
             '--roll', '0',
             '--frame-id', 'lidar_link',
             '--child-frame-id', 'custom_robot/base_footprint/gpu_lidar'
-        ]
+        ],
+        parameters=[{'use_sim_time': True}]
     )
     
-    # Static TF Publisher from camera_link_optical to Gazebo's lumped sensor frame
+    # Static TF Publisher from camera_link to Gazebo's lumped sensor frame
     static_tf_camera = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -110,9 +113,10 @@ def generate_launch_description():
             '--yaw', '0',
             '--pitch', '0',
             '--roll', '0',
-            '--frame-id', 'camera_link_optical',
+            '--frame-id', 'camera_link',
             '--child-frame-id', 'custom_robot/base_footprint/camera'
-        ]
+        ],
+        parameters=[{'use_sim_time': True}]
     )
     
     # Static TF Publisher from imu_link to Gazebo's lumped sensor frame
@@ -129,11 +133,47 @@ def generate_launch_description():
             '--roll', '0',
             '--frame-id', 'imu_link',
             '--child-frame-id', 'custom_robot/base_footprint/imu'
-        ]
+        ],
+        parameters=[{'use_sim_time': True}]
+    )
+    
+    # Declare launch argument for enabling SLAM
+    slam_arg = DeclareLaunchArgument(
+        'slam',
+        default_value='true',
+        description='Whether to run SLAM (slam_toolbox)'
+    )
+    
+    # Path to SLAM config
+    slam_config = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
+
+    # SLAM Toolbox online mapping
+    slam_toolbox = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('slam_toolbox'),
+                'launch',
+                'online_sync_launch.py'
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration('slam')),
+        launch_arguments={
+            'use_sim_time': 'true',
+            'slam_params_file': slam_config
+        }.items()
+    )
+    
+    # Odom TF Publisher Node
+    odom_tf_publisher = Node(
+        package='household_robot_simulation',
+        executable='odom_tf_publisher.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
     )
     
     return LaunchDescription([
         world_arg,
+        slam_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
@@ -141,5 +181,7 @@ def generate_launch_description():
         rviz,
         static_tf_lidar,
         static_tf_camera,
-        static_tf_imu
+        static_tf_imu,
+        odom_tf_publisher,
+        slam_toolbox
     ])

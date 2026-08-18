@@ -32,8 +32,8 @@ class TeleopKeyboard(Node):
         super().__init__('teleop_keyboard')
         self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
         self.settings = termios.tcgetattr(sys.stdin)
-        self.linear_speed = 20.0   # Default linear velocity (m/s)
-        self.angular_speed = 40.0  # Default angular velocity (rad/s)
+        self.linear_speed = 1.0   # Default linear velocity (m/s)
+        self.angular_speed = 2.0  # Default angular velocity (rad/s)
 
     def getKey(self):
         # Set terminal to raw mode to read single character immediately

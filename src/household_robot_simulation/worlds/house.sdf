@@ -265,10 +265,13 @@
 
     <!-- Bedroom (Bottom Left Room) -->
     <!-- Bed at (-3.5, -2.5, 0) with a 90 degree rotation (yaw = 1.57) -->
+    <!-- Bedroom (Bottom Left Room) -->
+    <!-- Bed at (-3.5, -2.5, 0) with a 90 degree rotation (yaw = 1.57) -->
     <include>
       <name>bedroom_bed</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bed</uri>
       <pose>-3.2 -2.2 0 0 0 1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- Bookshelf in Bedroom Corner -->
@@ -276,6 +279,7 @@
       <name>bedroom_bookshelf</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bookshelf</uri>
       <pose>-4.5 0.8 0 0 0 0</pose>
+      <static>true</static>
     </include>
 
     <!-- Living Room (Bottom Right Area) -->
@@ -284,6 +288,7 @@
       <name>living_couch</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/sofa</uri>
       <pose>2.5 -2.5 0 0 0 0</pose>
+      <static>true</static>
     </include>
 
     <!-- Coffee Table in front of Couch -->
@@ -291,6 +296,7 @@
       <name>living_coffee_table</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/coffeetable</uri>
       <pose>2.5 -1.2 0 0 0 0</pose>
+      <static>true</static>
     </include>
 
     <!-- Bookshelf in Living Room Corner -->
@@ -298,6 +304,7 @@
       <name>living_bookshelf</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bookshelf</uri>
       <pose>4.5 -2.5 0 0 0 1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- Dining Area (Top Right Area) -->
@@ -306,6 +313,7 @@
       <name>dining_table</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Dining Table</uri>
       <pose>2.0 2.0 0 0 0 0</pose>
+      <static>true</static>
     </include>
 
     <!-- Chair 1 (Left of table, facing right) -->
@@ -313,6 +321,7 @@
       <name>dining_chair_left</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/chair</uri>
       <pose>1.2 2.0 0 0 0 1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- Chair 2 (Right of table, facing left) -->
@@ -320,6 +329,7 @@
       <name>dining_chair_right</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/chair</uri>
       <pose>2.8 2.0 0 0 0 -1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- ==================== Bathroom Section ==================== -->
@@ -328,15 +338,15 @@
       <name>bathroom_bathtub</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/bathtub</uri>
       <pose>-4.5 2.75 0.01 0 0 1.57</pose>
+      <static>true</static>
     </include>
-
-
 
     <!-- Washbasin/Sink along the south divider wall -->
     <include>
       <name>bathroom_sink</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/KitchenSink</uri>
       <pose>-3.2 1.8 0.01 0 0 1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- ==================== Kitchen Section ==================== -->
@@ -345,6 +355,7 @@
       <name>kitchen_fridge</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Fridge</uri>
       <pose>-0.8 3.2 0 0 0 0</pose>
+      <static>true</static>
     </include>
 
     <!-- Stove/Oven along the north wall -->
@@ -352,6 +363,7 @@
       <name>kitchen_oven</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Oven</uri>
       <pose>0.5 3.5 0 0 0 -1.57</pose>
+      <static>true</static>
     </include>
 
     <!-- Kitchen Sink along the north wall -->
@@ -359,6 +371,7 @@
       <name>kitchen_sink</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/KitchenSink</uri>
       <pose>3.5 3.5 0 0 0 -1.57</pose>
+      <static>true</static>
     </include>
 
   </world>
