@@ -7,6 +7,7 @@ Panels:
         - /Grid1
         - /RobotModel1
         - /TF1
+        - /TF1/Frames
         - /LaserScan1
         - /CameraImage1
         - /Odometry1
@@ -60,9 +61,10 @@ Visualization Manager:
           Enabled: true
     - Class: rviz_default_plugins/LaserScan
       Topic: /scan
-      Color Transformer: FlatColor
-      Color: 255; 0; 0
-      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Style: Spheres
+      Size (m): 0.03
+      Decay Time: 0
       Enabled: true
       Name: LaserScan
       Selectable: true
