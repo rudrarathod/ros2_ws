@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, TimerAction
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, TimerAction, AppendEnvironmentVariable
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -11,6 +11,13 @@ def generate_launch_description():
     # Get package directories
     pkg_share = get_package_share_directory('household_robot_simulation')
     gz_sim_share = get_package_share_directory('ros_gz_sim')
+    
+    # Set Gazebo resource path to resolve package:// and model:// URIs
+    pkg_share_parent = os.path.dirname(pkg_share)
+    set_gz_resource_path = AppendEnvironmentVariable(
+        'GZ_SIM_RESOURCE_PATH',
+        pkg_share_parent
+    )
     
     # Paths
     world_file = os.path.join(pkg_share, 'worlds', 'house.sdf')
@@ -107,6 +114,13 @@ def generate_launch_description():
         description='Whether to run autonomous navigation (Nav2)'
     )
     
+    # Declare launch argument for enabling vision processor
+    vision_arg = DeclareLaunchArgument(
+        'vision',
+        default_value='true',
+        description='Whether to run the OpenCV vision processor'
+    )
+    
     # Path to SLAM config
     slam_config = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
 
@@ -161,12 +175,23 @@ def generate_launch_description():
         output='screen',
         parameters=[{'use_sim_time': True}]
     )
+
+    # Vision Processor Node
+    vision_processor = Node(
+        package='household_robot_simulation',
+        executable='vision_processor.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('vision'))
+    )
     
     return LaunchDescription([
+        set_gz_resource_path,
         world_arg,
         headless_arg,
         slam_arg,
         nav_arg,
+        vision_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
@@ -174,6 +199,7 @@ def generate_launch_description():
         rviz,
         ekf_node,
         safety_filter,
+        vision_processor,
         slam_toolbox,
         navigation
     ])

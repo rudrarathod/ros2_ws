@@ -43,11 +43,18 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install materials files
+install(
+  DIRECTORY materials
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Install python scripts
 install(
   PROGRAMS
     scripts/teleop_keyboard.py
     scripts/cmd_vel_safety_filter.py
+    scripts/vision_processor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
