@@ -121,6 +121,13 @@ def generate_launch_description():
         description='Whether to run the OpenCV vision processor'
     )
     
+    # Declare launch argument for enabling YOLO object detection
+    yolo_arg = DeclareLaunchArgument(
+        'yolo',
+        default_value='false',
+        description='Whether to run the YOLO object detection node'
+    )
+    
     # Path to SLAM config
     slam_config = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
 
@@ -184,6 +191,15 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('vision'))
     )
+
+    # YOLO Detector Node
+    yolo_detector = Node(
+        package='household_robot_simulation',
+        executable='yolo_detector.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('yolo'))
+    )
     
     return LaunchDescription([
         set_gz_resource_path,
@@ -192,6 +208,7 @@ def generate_launch_description():
         slam_arg,
         nav_arg,
         vision_arg,
+        yolo_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
@@ -200,6 +217,7 @@ def generate_launch_description():
         ekf_node,
         safety_filter,
         vision_processor,
+        yolo_detector,
         slam_toolbox,
         navigation
     ])

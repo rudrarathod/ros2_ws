@@ -339,8 +339,8 @@ ament_cmake_symlink_install_directory("/home/rudrarathod/ros2_ws/src/household_r
 # install(DIRECTORY "models" "DESTINATION" "share/household_robot_simulation")
 ament_cmake_symlink_install_directory("/home/rudrarathod/ros2_ws/src/household_robot_simulation" DIRECTORY "models" "DESTINATION" "share/household_robot_simulation")
 
-# install(PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "scripts/vision_processor.py" "scripts/ai_processor.py" "DESTINATION" "lib/household_robot_simulation")
-ament_cmake_symlink_install_programs("/home/rudrarathod/ros2_ws/src/household_robot_simulation" PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "scripts/vision_processor.py" "scripts/ai_processor.py" "DESTINATION" "lib/household_robot_simulation")
+# install(PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "scripts/vision_processor.py" "scripts/yolo_detector.py" "DESTINATION" "lib/household_robot_simulation")
+ament_cmake_symlink_install_programs("/home/rudrarathod/ros2_ws/src/household_robot_simulation" PROGRAMS "scripts/teleop_keyboard.py" "scripts/cmd_vel_safety_filter.py" "scripts/vision_processor.py" "scripts/yolo_detector.py" "DESTINATION" "lib/household_robot_simulation")
 
 # install(FILES "/home/rudrarathod/ros2_ws/build/household_robot_simulation/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 ament_cmake_symlink_install_files("/home/rudrarathod/ros2_ws/src/household_robot_simulation" FILES "/home/rudrarathod/ros2_ws/build/household_robot_simulation/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")

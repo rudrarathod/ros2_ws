@@ -70,7 +70,7 @@ Visualization Manager:
       Name: LaserScan
       Selectable: true
     - Class: rviz_default_plugins/Image
-      Topic: /camera/image_raw
+      Topic: /camera/image_processed
       Enabled: true
       Name: CameraImage
     - Class: rviz_default_plugins/Odometry

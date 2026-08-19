@@ -460,5 +460,33 @@
       </link>
     </model>
 
+    <!-- Bedroom Ceiling Point Light -->
+    <light name="bedroom_light" type="point">
+      <pose>-3.5 -2.5 2.5 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation>
+        <range>8</range>
+        <constant>0.5</constant>
+        <linear>0.1</linear>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+      <cast_shadows>true</cast_shadows>
+    </light>
+
+    <!-- Bathroom Ceiling Point Light -->
+    <light name="bathroom_light" type="point">
+      <pose>-3.5 2.5 2.5 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation>
+        <range>8</range>
+        <constant>0.5</constant>
+        <linear>0.1</linear>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+      <cast_shadows>true</cast_shadows>
+    </light>
+
   </world>
 </sdf>

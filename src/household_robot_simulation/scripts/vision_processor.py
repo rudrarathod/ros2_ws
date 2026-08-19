@@ -7,9 +7,14 @@ an annotated image stream showing detected objects (by color), faces, and QR cod
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+import json
 import numpy as np
+import os
+from ament_index_python.packages import get_package_share_directory
+from ultralytics import YOLO
 
 
 class VisionProcessor(Node):
@@ -28,6 +33,22 @@ class VisionProcessor(Node):
 
         # Initialize QR Code Detector
         self.qr_detector = cv2.QRCodeDetector()
+
+        # Load YOLO model (OpenVINO optimized for Intel Iris GPU)
+        try:
+            pkg_share = get_package_share_directory('household_robot_simulation')
+            model_path = os.path.join(pkg_share, 'models', 'yolov8n_openvino_model')
+            self.get_logger().info(f"Loading OpenVINO YOLO model from {model_path}...")
+            self.yolo_model = YOLO(model_path, task='detect')
+            self.get_logger().info("YOLO model loaded successfully on OpenVINO backend.")
+        except Exception as e:
+            self.get_logger().error(f"Failed to load OpenVINO YOLO model: {e}. Falling back to PyTorch CPU...")
+            try:
+                self.yolo_model = YOLO('yolov8n.pt')
+                self.get_logger().info("YOLO CPU model loaded successfully.")
+            except Exception as ex:
+                self.get_logger().error(f"Failed to load fallback YOLO model: {ex}")
+                self.yolo_model = None
 
         # Define HSV Color Ranges for Object Detection
         # Red has two ranges in HSV due to wrap-around
@@ -48,6 +69,10 @@ class VisionProcessor(Node):
             ]
         }
 
+        # Frame skip for YOLO to conserve CPU (run YOLO on every 2nd frame)
+        self.frame_counter = 0
+        self.yolo_frame_skip = 2
+
         # Subscriptions
         self.image_sub = self.create_subscription(
             Image,
@@ -62,6 +87,15 @@ class VisionProcessor(Node):
             '/camera/image_processed',
             10
         )
+
+        self.yolo_detections_pub = self.create_publisher(
+            String,
+            '/yolo/detections',
+            10
+        )
+
+        # Cache for YOLO detections to prevent flickering on skipped frames
+        self.last_yolo_detections = []
 
         self.get_logger().info("Vision Processor Node started.")
 
@@ -91,6 +125,13 @@ class VisionProcessor(Node):
 
         # 3. Process QR Code Detection
         self.detect_qr_codes(detection_image, cv_image)
+
+        # 4. Process YOLO Object Detection
+        self.frame_counter += 1
+        if self.yolo_model is not None:
+            if self.frame_counter % self.yolo_frame_skip == 0:
+                self.detect_yolo_objects(detection_image)
+            self.draw_cached_yolo_objects(cv_image)
 
         # Publish the processed/annotated image
         try:
@@ -181,6 +222,62 @@ class VisionProcessor(Node):
                 self.get_logger().info(f"QR Code Detected: '{decoded_info}'", throttle_duration_sec=2.0)
                 x, y = pts[0][0], pts[0][1]
                 self.draw_text_with_outline(output_image, f"QR: {decoded_info}", (x, y - 10), font_scale=0.5, color=(0, 255, 0))
+
+    def detect_yolo_objects(self, input_image):
+        if self.yolo_model is None:
+            return
+        try:
+            results = self.yolo_model.predict(input_image, conf=0.15, verbose=False, device='intel:gpu')
+        except Exception:
+            results = self.yolo_model.predict(input_image, conf=0.15, verbose=False, device='cpu')
+        result = results[0]
+
+        detections_list = []
+        self.last_yolo_detections = []
+        for box in result.boxes:
+            cls_id = int(box.cls[0])
+            class_name = self.yolo_model.names[cls_id]
+            conf = float(box.conf[0])
+            bbox = box.xyxy[0].tolist()
+            x1, y1, x2, y2 = [int(v) for v in bbox]
+
+            detections_list.append({
+                'class': class_name,
+                'confidence': conf,
+                'bbox': [x1, y1, x2, y2]
+            })
+            self.last_yolo_detections.append({
+                'class': class_name,
+                'confidence': conf,
+                'bbox': [x1, y1, x2, y2]
+            })
+
+        # Publish structured JSON detections
+        detections_msg = String()
+        detections_msg.data = json.dumps(detections_list)
+        self.yolo_detections_pub.publish(detections_msg)
+
+        if detections_list:
+            summary = ", ".join([f"{d['class']} ({d['confidence']:.2f})" for d in detections_list])
+            self.get_logger().info(f"YOLO Detected: {summary}", throttle_duration_sec=2.0)
+
+    def draw_cached_yolo_objects(self, output_image):
+        for d in self.last_yolo_detections:
+            class_name = d['class']
+            conf = d['confidence']
+            x1, y1, x2, y2 = d['bbox']
+
+            # Calculate centroid
+            cx = int((x1 + x2) / 2)
+            cy = int((y1 + y2) / 2)
+
+            # Draw bounding box (Orange: B=0, G=165, R=255)
+            cv2.rectangle(output_image, (x1, y1), (x2, y2), (0, 165, 255), 2)
+            cv2.circle(output_image, (cx, cy), 5, (0, 0, 255), -1)
+
+            # Label overlay
+            label = f"{class_name} ({conf:.2f})"
+            self.draw_text_with_outline(output_image, label, (x1, y1 - 5), font_scale=0.45, color=(255, 255, 255))
 
 
 def main(args=None):
