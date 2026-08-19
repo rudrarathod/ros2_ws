@@ -62,6 +62,7 @@ install(
     scripts/cmd_vel_safety_filter.py
     scripts/vision_processor.py
     scripts/yolo_detector.py
+    scripts/person_follower.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

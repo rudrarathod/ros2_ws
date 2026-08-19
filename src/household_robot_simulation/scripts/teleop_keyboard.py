@@ -30,7 +30,10 @@ Keep holding WASD keys to drive. Releasing them will automatically stop the robo
 class TeleopKeyboard(Node):
     def __init__(self):
         super().__init__('teleop_keyboard')
-        self.publisher = self.create_publisher(Twist, 'cmd_vel_raw', 10)
+        self.declare_parameter('topic', 'cmd_vel_raw')
+        topic_name = self.get_parameter('topic').value
+        self.get_logger().info(f"Publishing teleop commands to: {topic_name}")
+        self.publisher = self.create_publisher(Twist, topic_name, 10)
         self.settings = termios.tcgetattr(sys.stdin)
         self.linear_speed = 1.0   # Default linear velocity (m/s)
         self.angular_speed = 2.0  # Default angular velocity (rad/s)
