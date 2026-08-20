@@ -503,31 +503,12 @@
       </plugin>
     </model>
 
-    <!-- QR Code Board -->
+    <!-- QR Code Poster on the Wall -->
     <model name="qr_board">
       <static>true</static>
-      <pose>2.2 -0.3 0.4 0 0 3.14159</pose>  <!-- Facing West (towards spawn) -->
+      <pose>-1.445 0.0 0.5 0 0 0</pose> <!-- Hung on the East-facing partition wall -->
       <link name="link">
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>0.05 0.5 0.8</size>
-            </box>
-          </geometry>
-        </collision>
-        <visual name="board_visual">
-          <geometry>
-            <box>
-              <size>0.05 0.5 0.8</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.8 0.8 0.8 1</ambient>
-            <diffuse>0.8 0.8 0.8 1</diffuse>
-          </material>
-        </visual>
         <visual name="qr_texture_visual">
-          <pose>0.026 0 0 0 0 0</pose>
           <geometry>
             <box>
               <size>0.001 0.5 0.5</size>

@@ -187,7 +187,10 @@ def generate_launch_description():
         package='household_robot_simulation',
         executable='cmd_vel_safety_filter.py',
         output='screen',
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+            'use_sim_time': True,
+            'safety_padding': 0.28
+        }]
     )
 
     # Vision Processor Node
