@@ -14,6 +14,7 @@ from geometry_msgs.msg import Twist, PoseStamped
 from sensor_msgs.msg import Image, LaserScan
 from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
+from action_msgs.msg import GoalStatus
 import json
 import math
 import tf2_ros
@@ -71,6 +72,7 @@ class PersonFollower(Node):
         self.last_sent_x = None
         self.last_sent_y = None
         self.current_goal_handle = None
+        self.nav2_goal_reached = False
 
         # TF2 Setup
         self.tf_buffer = tf2_ros.Buffer()
@@ -177,8 +179,8 @@ class PersonFollower(Node):
         angle_min = self.last_scan.angle_min
         angle_increment = self.last_scan.angle_increment
 
-        best_dist = None
-        window_half_width = 0.26  # ~15 degrees search window
+        valid_dists = []
+        window_half_width = 0.09  # ~5 degrees search window (10 degrees total)
         
         for i, dist in enumerate(ranges):
             if dist < self.last_scan.range_min or dist > self.last_scan.range_max or math.isinf(dist) or math.isnan(dist):
@@ -186,10 +188,18 @@ class PersonFollower(Node):
             
             angle = angle_min + i * angle_increment
             if abs(angle - target_angle) < window_half_width:
-                if best_dist is None or dist < best_dist:
-                    best_dist = dist
+                valid_dists.append(dist)
         
-        return best_dist
+        if not valid_dists:
+            return None
+            
+        # Median filter to eliminate single-beam noise
+        valid_dists.sort()
+        n = len(valid_dists)
+        if n % 2 == 1:
+            return valid_dists[n // 2]
+        else:
+            return (valid_dists[n // 2 - 1] + valid_dists[n // 2]) / 2.0
 
     def predict_trajectory(self, v, w, horizon=1.0, dt=0.2):
         trajectory = []
@@ -218,46 +228,60 @@ class PersonFollower(Node):
         # Try to use Nav2 if distance and transforms are available
         nav2_success = False
         if d is not None:
-            x_rel = d * math.cos(target_angle_camera)
-            y_rel = d * math.sin(target_angle_camera)
+            # We want to stay 0.5m away from the person
+            # Project the target coordinate to d - 0.5m so it is in free space
+            d_goal = d - 0.5
+            
+            if d_goal < 0.1:
+                # Human is too close, cancel active goal and brake immediately to stop
+                self.cancel_nav2_goal()
+                brake_msg = Twist()
+                self.cmd_pub.publish(brake_msg)
+                nav2_success = True  # treated as handled to stay in Nav2 state
+            else:
+                x_rel = d_goal * math.cos(target_angle_camera)
+                y_rel = d_goal * math.sin(target_angle_camera)
 
-            # Create PoseStamped
-            pose_local = PoseStamped()
-            pose_local.header.frame_id = 'base_footprint'
-            pose_local.header.stamp = rclpy.time.Time().to_msg()
-            pose_local.pose.position.x = x_rel
-            pose_local.pose.position.y = y_rel
-            pose_local.pose.orientation.w = 1.0
+                # Create PoseStamped
+                pose_local = PoseStamped()
+                pose_local.header.frame_id = 'base_footprint'
+                pose_local.header.stamp = rclpy.time.Time().to_msg()
+                pose_local.pose.position.x = x_rel
+                pose_local.pose.position.y = y_rel
+                pose_local.pose.orientation.w = 1.0
 
-            try:
-                # Transform to map frame
-                pose_map = self.tf_buffer.transform(pose_local, 'map', timeout=rclpy.duration.Duration(seconds=0.1))
-                
-                # Check if Nav2 action server is available
-                if self.nav_client.wait_for_server(timeout_sec=0.01):
-                    nav2_success = True
-                    self.in_backup_mode = False
+                try:
+                    # Transform to map frame
+                    pose_map = self.tf_buffer.transform(pose_local, 'map', timeout=rclpy.duration.Duration(seconds=0.1))
+                    # Synchronize goal timestamp with the current time
+                    pose_map.header.stamp = self.get_clock().now().to_msg()
                     
-                    # Rate-limit sending goals to Nav2 (once every 1.0s or if moved > 0.2m)
-                    now = self.get_clock().now()
-                    time_since_last = (now - self.last_goal_sent_time).nanoseconds / 1e9 if self.last_goal_sent_time else float('inf')
-                    
-                    dist_moved = float('inf')
-                    if self.last_sent_x is not None and self.last_sent_y is not None:
-                        dist_moved = math.hypot(pose_map.pose.position.x - self.last_sent_x, pose_map.pose.position.y - self.last_sent_y)
+                    # Check if Nav2 action server is available
+                    if self.nav_client.wait_for_server(timeout_sec=0.01):
+                        nav2_success = True
+                        self.in_backup_mode = False
+                        
+                        # Rate-limit sending goals to Nav2 (once every 1.0s or if moved > 0.2m)
+                        now = self.get_clock().now()
+                        time_since_last = (now - self.last_goal_sent_time).nanoseconds / 1e9 if self.last_goal_sent_time else float('inf')
+                        
+                        dist_moved = float('inf')
+                        if self.last_sent_x is not None and self.last_sent_y is not None:
+                            dist_moved = math.hypot(pose_map.pose.position.x - self.last_sent_x, pose_map.pose.position.y - self.last_sent_y)
 
-                    if time_since_last > 1.0 or dist_moved > 0.2:
-                        goal_msg = NavigateToPose.Goal()
-                        goal_msg.pose = pose_map
-                        self.get_logger().info(f"[Nav2 Mode] Routing to x={pose_map.pose.position.x:.2f}, y={pose_map.pose.position.y:.2f}")
-                        send_goal_future = self.nav_client.send_goal_async(goal_msg)
-                        send_goal_future.add_done_callback(self.goal_response_callback)
-                        self.last_goal_sent_time = now
-                        self.last_sent_x = pose_map.pose.position.x
-                        self.last_sent_y = pose_map.pose.position.y
-            except Exception as e:
-                # TF transform failed
-                self.get_logger().warn(f"Nav2 transform/goal step failed: {e}", throttle_duration_sec=2.0)
+                        if time_since_last > 1.0 or dist_moved > 0.2:
+                            self.nav2_goal_reached = False
+                            goal_msg = NavigateToPose.Goal()
+                            goal_msg.pose = pose_map
+                            self.get_logger().info(f"[Nav2 Mode] Routing to x={pose_map.pose.position.x:.2f}, y={pose_map.pose.position.y:.2f}")
+                            send_goal_future = self.nav_client.send_goal_async(goal_msg)
+                            send_goal_future.add_done_callback(self.goal_response_callback)
+                            self.last_goal_sent_time = now
+                            self.last_sent_x = pose_map.pose.position.x
+                            self.last_sent_y = pose_map.pose.position.y
+                except Exception as e:
+                    # TF transform failed
+                    self.get_logger().warn(f"Nav2 transform/goal step failed: {e}", throttle_duration_sec=2.0)
 
         if not nav2_success:
             # Fall back to Backup Mode: Standalone Custom Python DWA local controller
@@ -373,8 +397,34 @@ class PersonFollower(Node):
                 self.get_logger().info("Goal rejected by Nav2 server")
                 return
             self.current_goal_handle = goal_handle
+            
+            # Watch the result of this specific navigation action using a closure
+            def result_cb(result_future):
+                self.get_result_callback(result_future, goal_handle)
+
+            self.get_result_future = goal_handle.get_result_async()
+            self.get_result_future.add_done_callback(result_cb)
         except Exception as e:
             self.get_logger().error(f"Goal response callback failed: {e}")
+
+    def get_result_callback(self, future, goal_handle):
+        try:
+            # Only process status updates for the active goal handle
+            if goal_handle != self.current_goal_handle:
+                return
+
+            result = future.result()
+            status = result.status
+            self.get_logger().info(f"Nav2 action goal finished with status: {status}")
+            self.current_goal_handle = None
+            
+            # If the goal finished (succeeded, aborted, or canceled) and we are currently
+            # searching, trigger the search rotation flag immediately.
+            if status in [GoalStatus.STATUS_SUCCEEDED, GoalStatus.STATUS_ABORTED, GoalStatus.STATUS_CANCELED]:
+                if self.state == "SEARCHING":
+                    self.nav2_goal_reached = True
+        except Exception as e:
+            self.get_logger().error(f"Get result callback failed: {e}")
 
     def cancel_nav2_goal(self):
         if self.current_goal_handle is not None:
@@ -396,7 +446,9 @@ class PersonFollower(Node):
                 should_rotate_search = True
             else:
                 # Nav2 Mode: Check if we have reached the last known target location
-                if self.last_sent_x is not None and self.last_sent_y is not None:
+                if self.nav2_goal_reached:
+                    should_rotate_search = True
+                elif self.last_sent_x is not None and self.last_sent_y is not None:
                     try:
                         trans = self.tf_buffer.lookup_transform('map', 'base_footprint', rclpy.time.Time())
                         rx = trans.transform.translation.x
@@ -406,6 +458,7 @@ class PersonFollower(Node):
                         if dist_to_goal < 0.45:
                             # Reached destination, cancel goal and start search rotation
                             self.cancel_nav2_goal()
+                            self.nav2_goal_reached = True
                             should_rotate_search = True
                     except Exception:
                         should_rotate_search = True
