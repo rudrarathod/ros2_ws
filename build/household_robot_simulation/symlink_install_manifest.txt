@@ -4,6 +4,7 @@
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/urdf/custom_robot.urdf
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/rviz/robot.rviz
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/bridge_config.yaml
+/home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/dynamic_follow_bt.xml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/ekf.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/nav2_params.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/slam_toolbox_params.yaml
