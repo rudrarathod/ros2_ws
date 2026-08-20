@@ -390,7 +390,7 @@
           </inertia>
         </inertial>
         <collision name="collision">
-          <pose>0 0 0.8 0 0 0</pose>
+          <pose>0 0 0.7 0 0 0</pose>
           <geometry>
             <cylinder>
               <radius>0.15</radius>
@@ -399,6 +399,7 @@
           </geometry>
         </collision>
         <visual name="visual">
+          <pose>0 0 -0.1 0 0 3.14159</pose>
           <geometry>
             <mesh>
               <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/malevisitoronphone/2/files/meshes/MaleVisitorStatic.obj</uri>
@@ -460,6 +461,23 @@
         </collision>
       </link>
 
+      <link name="front_caster">
+        <pose>0.3 0 0 0 0 0</pose>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.005</ixx><iyy>0.005</iyy><izz>0.005</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+        </collision>
+      </link>
+
       <joint name="left_wheel_joint" type="revolute">
         <parent>link</parent>
         <child>left_wheel</child>
@@ -487,6 +505,11 @@
       <joint name="caster_joint" type="ball">
         <parent>link</parent>
         <child>caster</child>
+      </joint>
+
+      <joint name="front_caster_joint" type="ball">
+        <parent>link</parent>
+        <child>front_caster</child>
       </joint>
 
       <plugin
