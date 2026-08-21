@@ -63,6 +63,8 @@ install(
     scripts/vision_processor.py
     scripts/yolo_detector.py
     scripts/person_follower.py
+    scripts/voice_interpreter.py
+    scripts/voice_simulator_cli.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

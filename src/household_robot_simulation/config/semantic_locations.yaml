@@ -1,0 +1,30 @@
+# Semantic target locations mapping database
+locations:
+  kitchen:
+    x: 3.5
+    y: -1.0
+    yaw: 0.0
+  bedroom:
+    x: -2.5
+    y: -2.0
+    yaw: 1.57
+  living room:
+    x: 0.0
+    y: 0.0
+    yaw: 0.0
+  start:
+    x: 0.0
+    y: 0.0
+    yaw: 0.0
+
+# Patrol waypoints queue
+patrol_waypoints:
+  - x: 0.0
+    y: 0.0
+    yaw: 0.0
+  - x: -2.5
+    y: -2.0
+    yaw: 1.57
+  - x: 3.5
+    y: -1.0
+    yaw: 0.0

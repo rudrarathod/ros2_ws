@@ -36,7 +36,7 @@ class PersonFollower(Node):
         super().__init__('person_follower')
 
         # Declare parameters for easy tuning
-        self.declare_parameter('follow_mode', True)
+        self.declare_parameter('follow_mode', False)
         self.declare_parameter('target_area_fraction', 0.08)  # Desired bbox area fraction of image (e.g., 8%)
         self.declare_parameter('max_linear_speed', 0.25)      # Maximum forward/backward speed (m/s)
         self.declare_parameter('max_angular_speed', 0.6)      # Maximum turning speed (rad/s)
@@ -273,6 +273,7 @@ class PersonFollower(Node):
                             self.nav2_goal_reached = False
                             goal_msg = NavigateToPose.Goal()
                             goal_msg.pose = pose_map
+                            goal_msg.behavior_tree = "/home/rudrarathod/ros2_ws/src/household_robot_simulation/config/dynamic_follow_bt.xml"
                             self.get_logger().info(f"[Nav2 Mode] Routing to x={pose_map.pose.position.x:.2f}, y={pose_map.pose.position.y:.2f}")
                             send_goal_future = self.nav_client.send_goal_async(goal_msg)
                             send_goal_future.add_done_callback(self.goal_response_callback)

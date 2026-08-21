@@ -219,6 +219,14 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('follow'))
     )
+
+    # Voice Interpreter Node
+    voice_interpreter = Node(
+        package='household_robot_simulation',
+        executable='voice_interpreter.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
+    )
     
     return LaunchDescription([
         set_gz_resource_path,
@@ -239,6 +247,7 @@ def generate_launch_description():
         vision_processor,
         yolo_detector,
         person_follower,
+        voice_interpreter,
         slam_toolbox,
         navigation
     ])
