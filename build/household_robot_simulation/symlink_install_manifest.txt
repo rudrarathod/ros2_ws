@@ -24,6 +24,7 @@
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/person_follower.py
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/voice_interpreter.py
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/voice_simulator_cli.py
+/home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/dashboard_server.py
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/parent_prefix_path/household_robot_simulation
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.sh

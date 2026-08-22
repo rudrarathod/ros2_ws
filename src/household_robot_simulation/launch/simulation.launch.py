@@ -135,6 +135,13 @@ def generate_launch_description():
         description='Whether to run the person follower node'
     )
     
+    # Declare launch argument for enabling Robot Status Dashboard Webserver
+    dashboard_arg = DeclareLaunchArgument(
+        'dashboard',
+        default_value='true',
+        description='Whether to run the web status dashboard server'
+    )
+    
     # Path to SLAM config
     slam_config = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
 
@@ -228,6 +235,15 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
     
+    # Dashboard Server Web UI Node
+    dashboard_server = Node(
+        package='household_robot_simulation',
+        executable='dashboard_server.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('dashboard'))
+    )
+    
     return LaunchDescription([
         set_gz_resource_path,
         world_arg,
@@ -237,6 +253,7 @@ def generate_launch_description():
         vision_arg,
         yolo_arg,
         follow_arg,
+        dashboard_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
@@ -248,6 +265,7 @@ def generate_launch_description():
         yolo_detector,
         person_follower,
         voice_interpreter,
+        dashboard_server,
         slam_toolbox,
         navigation
     ])
