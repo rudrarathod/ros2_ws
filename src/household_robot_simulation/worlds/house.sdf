@@ -632,5 +632,25 @@
       </link>
     </model>
 
+    <!-- Physical Charging Tile on the Floor (Visual only, no collision) -->
+    <model name="charging_tile">
+      <static>true</static>
+      <pose>0.0 0.0 0.005 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.6 0.6 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 0.0 1</ambient> <!-- Green color -->
+            <diffuse>0.0 0.8 0.0 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
   </world>
 </sdf>

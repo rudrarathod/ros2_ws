@@ -16,6 +16,10 @@ locations:
     x: 0.0
     y: 0.0
     yaw: 0.0
+  charging_station:
+    x: 0.0
+    y: 0.0
+    yaw: 0.0
 
 # Patrol waypoints queue
 patrol_waypoints:

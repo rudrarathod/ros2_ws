@@ -10,7 +10,8 @@ Translates commands to robot actions:
 """
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
+from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Twist, PoseStamped
 from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
@@ -75,22 +76,129 @@ class VoiceInterpreter(Node):
             'medicine': 2
         }
 
+        # Battery Simulation & Docking States
+        self.battery_level = 100.0
+        self.is_charging = False
+        self.low_battery_triggered = False
+        self.docking_active = False
+        self.robot_is_moving = False
+
+        # Ensure charging station exists in target locations database
+        if 'charging_station' not in self.locations:
+            self.locations['charging_station'] = (0.0, 0.0, 0.0)
+
         # Service client for setting follower parameters
         self.param_client = self.create_client(SetParameters, '/person_follower/set_parameters')
         
         # Action client for Nav2
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
-        # Subscriber
+        # Subscribers
         self.cmd_sub = self.create_subscription(
             String, '/voice/command', self.voice_callback, 10)
+        self.cmd_vel_sub = self.create_subscription(
+            Twist, '/cmd_vel', self.cmd_vel_callback, 10)
+
+        # Publishers
+        self.battery_pub = self.create_publisher(Float32, '/battery/percentage', 10)
+        self.marker_pub = self.create_publisher(Marker, '/battery/marker', 10)
 
         # Publisher for braking
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_raw', 10)
 
         self.current_goal_handle = None
 
+        # 1Hz Battery simulation timer
+        self.battery_timer = self.create_timer(1.0, self.simulate_battery)
+
         self.get_logger().info("Voice Command Interpreter Node Initialized.")
+
+    def cmd_vel_callback(self, msg: Twist):
+        # Determine if the robot is actively moving
+        self.robot_is_moving = (abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01)
+
+    def simulate_battery(self):
+        if self.is_charging:
+            # Charge the battery by 5.0% per second for fast simulation testing
+            self.battery_level = min(100.0, self.battery_level + 5.0)
+            if self.battery_level >= 100.0:
+                self.is_charging = False
+                self.low_battery_triggered = False
+                self.get_logger().info("Battery fully charged (100.0%)! Ready for new commands.")
+        else:
+            # Discharge: 0.1% per second idle, 0.4% per second when moving
+            decay = 0.4 if self.robot_is_moving else 0.1
+            self.battery_level = max(0.0, self.battery_level - decay)
+            
+            # Warn at 30%
+            if self.battery_level <= 30.0 and int(self.battery_level) % 5 == 0 and abs(self.battery_level - int(self.battery_level)) < 0.1:
+                self.get_logger().warn(f"Low Battery Alert: {self.battery_level:.1f}% Remaining.")
+                
+            # Trigger autonomous docking at 20%
+            if self.battery_level <= 20.0 and not self.low_battery_triggered:
+                self.low_battery_triggered = True
+                self.trigger_autonomous_docking()
+
+        # Publish current battery level
+        battery_msg = Float32()
+        battery_msg.data = self.battery_level
+        self.battery_pub.publish(battery_msg)
+
+        # Publish RViz visualization marker
+        self.publish_battery_marker()
+
+    def publish_battery_marker(self):
+        marker = Marker()
+        marker.header.frame_id = "base_link"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "battery"
+        marker.id = 0
+        marker.type = Marker.TEXT_VIEW_FACING
+        marker.action = Marker.ADD
+        
+        # Position floating 0.6m above the robot base
+        marker.pose.position.x = 0.0
+        marker.pose.position.y = 0.0
+        marker.pose.position.z = 0.6
+        marker.pose.orientation.w = 1.0
+        
+        # Formulate text representation
+        state = "Charging" if self.is_charging else "Discharging"
+        marker.text = f"Battery: {self.battery_level:.1f}% ({state})"
+        
+        # Size of the text font
+        marker.scale.z = 0.12
+        
+        # Color based on battery level
+        if self.battery_level > 50.0:
+            marker.color.r = 0.0
+            marker.color.g = 1.0  # Green
+            marker.color.b = 0.0
+        elif self.battery_level > 20.0:
+            marker.color.r = 1.0
+            marker.color.g = 1.0  # Yellow
+            marker.color.b = 0.0
+        else:
+            marker.color.r = 1.0
+            marker.color.g = 0.0  # Red
+            marker.color.b = 0.0
+            
+        marker.color.a = 1.0  # Opaque
+        
+        # Publisher
+        self.marker_pub.publish(marker)
+
+    def trigger_autonomous_docking(self):
+        self.get_logger().warn(f"Battery Critical ({self.battery_level:.1f}%)! Aborting tasks and returning to charging station.")
+        self.patrol_mode = False
+        self.delivery_stage = None
+        self.set_follower_mode(False)
+        self.cancel_nav2_goal()
+        
+        # Dispatch docking goal
+        self.docking_active = True
+        x, y, yaw = self.locations['charging_station']
+        self.send_nav2_goal(x, y, yaw)
 
     def set_follower_mode(self, enable: bool):
         """Set the follow_mode parameter on person_follower node."""
@@ -111,6 +219,18 @@ class VoiceInterpreter(Node):
         command = msg.data.lower().strip()
         self.get_logger().info(f"Received voice command: '{command}'")
 
+        # Check if battery is critically low
+        is_battery_cmd = any(kw in command for kw in ["battery", "charge", "dock", "recharge", "refill", "restock"])
+        if self.battery_level < 10.0 and not is_battery_cmd:
+            self.get_logger().error(f"Action Refused: Battery level too low ({self.battery_level:.1f}%). Please allow the robot to charge.")
+            return
+
+        # Interrupt charging if executing a new command
+        if self.is_charging and not is_battery_cmd:
+            self.is_charging = False
+            self.low_battery_triggered = False
+            self.get_logger().info(f"Undocking: Interrupting charging session at {self.battery_level:.1f}% to execute new command.")
+
         # 1. Follow Commands
         if any(kw in command for kw in ["follow me", "come here", "track me", "start following"]):
             self.patrol_mode = False
@@ -128,7 +248,24 @@ class VoiceInterpreter(Node):
             self.cmd_pub.publish(brake_msg)
             self.get_logger().info("Action: Stopping robot movement.")
 
-        # 3. Delivery Commands
+        # 3. Battery Status Commands
+        elif any(kw in command for kw in ["battery status", "battery level", "check battery"]):
+            state_str = "Charging" if self.is_charging else "Discharging"
+            self.get_logger().info(f"Battery Status: {self.battery_level:.1f}% ({state_str})")
+
+        # 4. Manual Charging/Docking Commands
+        elif any(kw in command for kw in ["go charge", "dock", "return to charger", "recharge"]):
+            self.get_logger().info("Action: Manual command received. Returning to charging station.")
+            self.patrol_mode = False
+            self.delivery_stage = None
+            self.set_follower_mode(False)
+            self.cancel_nav2_goal()
+            
+            self.docking_active = True
+            x, y, yaw = self.locations['charging_station']
+            self.send_nav2_goal(x, y, yaw)
+
+        # 5. Delivery Commands
         elif any(kw in command for kw in ["deliver", "bring", "get", "fetch"]):
             self.patrol_mode = False
             self.set_follower_mode(False)
@@ -159,7 +296,7 @@ class VoiceInterpreter(Node):
             self.get_logger().info(f"Action: Starting delivery workflow. Retrieve {item} from {source} (Stock: {self.inventory[item]}) and deliver to {destination}.")
             self.send_nav2_goal(x, y, yaw)
 
-        # 4. Restocking Commands
+        # 6. Restocking Commands
         elif any(kw in command for kw in ["restock", "refill"]):
             self.patrol_mode = False
             self.set_follower_mode(False)
@@ -176,7 +313,7 @@ class VoiceInterpreter(Node):
                 self.inventory['medicine'] = 2
                 self.get_logger().info("Action: All item storage counters successfully restocked.")
 
-        # 4. Navigation Commands
+        # 7. Navigation Commands
         elif any(room in command for room in self.locations.keys()):
             self.patrol_mode = False
             self.set_follower_mode(False)
@@ -193,7 +330,7 @@ class VoiceInterpreter(Node):
                 self.get_logger().info(f"Action: Navigating to room: '{target_room}' (x={x}, y={y})")
                 self.send_nav2_goal(x, y, yaw)
 
-        # 4. Patrol Commands
+        # 8. Patrol Commands
         elif any(kw in command for kw in ["patrol", "start patrol", "watch the house"]):
             self.set_follower_mode(False)
             self.patrol_mode = True
@@ -256,7 +393,11 @@ class VoiceInterpreter(Node):
             self.current_goal_handle = None
 
             if status == GoalStatus.STATUS_SUCCEEDED:
-                if self.delivery_stage == "GO_TO_SOURCE":
+                if self.docking_active:
+                    self.docking_active = False
+                    self.is_charging = True
+                    self.get_logger().info("Arrived at Charging Station. Successfully docked! Charging started...")
+                elif self.delivery_stage == "GO_TO_SOURCE":
                     self.get_logger().info(f"Arrived at source '{self.delivery_source}'. Loading {self.delivery_item}... Please wait 3 seconds.")
                     self.delivery_stage = "PICKING_UP"
                     self.pickup_timer = self.create_timer(3.0, self.pickup_complete_callback)
@@ -267,7 +408,10 @@ class VoiceInterpreter(Node):
                     self.current_patrol_index = (self.current_patrol_index + 1) % len(self.patrol_waypoints)
                     self.send_next_patrol_waypoint()
             else:
-                if self.delivery_stage is not None:
+                if self.docking_active:
+                    self.get_logger().error("Failed to navigate to Charging Station!")
+                    self.docking_active = False
+                elif self.delivery_stage is not None:
                     self.get_logger().warn(f"Delivery navigation failed or was canceled during stage: {self.delivery_stage}")
                     self.delivery_stage = None
 
