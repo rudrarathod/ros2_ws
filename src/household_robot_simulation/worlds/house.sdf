@@ -345,7 +345,7 @@
     <include>
       <name>bathroom_sink</name>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/KitchenSink</uri>
-      <pose>-3.2 1.8 0.01 0 0 1.57</pose>
+      <pose>-3.2 1.85 0.01 0 0 3.1416</pose>
       <static>true</static>
     </include>
 
@@ -581,7 +581,7 @@
     <!-- Physical Kitchen Counter for Water Bottle Storage -->
     <model name="kitchen_counter">
       <static>true</static>
-      <pose>-1.25 -1.5 0.4 0 0 0</pose>
+      <pose>4.8 2.5 0.4 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
@@ -608,19 +608,19 @@
     <!-- Physical Medicine Cabinet for Medical Item Storage -->
     <model name="medicine_cabinet">
       <static>true</static>
-      <pose>-1.25 0.5 0.4 0 0 0</pose>
+      <pose>1.0 -3.8 0.4 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.4 0.8 0.8</size>
+              <size>0.8 0.4 0.8</size>
             </box>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.4 0.8 0.8</size>
+              <size>0.8 0.4 0.8</size>
             </box>
           </geometry>
           <material>

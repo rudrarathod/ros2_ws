@@ -10,8 +10,9 @@ Translates commands to robot actions:
 """
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Float32
+from std_msgs.msg import String, Float32, Bool
 from visualization_msgs.msg import Marker
+import json
 from geometry_msgs.msg import Twist, PoseStamped
 from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
@@ -93,15 +94,22 @@ class VoiceInterpreter(Node):
         # Action client for Nav2
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
+        # Emergency Alert States
+        self.emergency_active = False
+        self.emergency_reason = ""
+
         # Subscribers
         self.cmd_sub = self.create_subscription(
             String, '/voice/command', self.voice_callback, 10)
         self.cmd_vel_sub = self.create_subscription(
             Twist, '/cmd_vel', self.cmd_vel_callback, 10)
+        self.yolo_sub = self.create_subscription(
+            String, '/yolo/detections', self.yolo_callback, 10)
 
         # Publishers
         self.battery_pub = self.create_publisher(Float32, '/battery/percentage', 10)
         self.marker_pub = self.create_publisher(Marker, '/battery/marker', 10)
+        self.alarm_pub = self.create_publisher(Bool, '/emergency/alarm', 10)
 
         # Publisher for braking
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_raw', 10)
@@ -116,6 +124,85 @@ class VoiceInterpreter(Node):
     def cmd_vel_callback(self, msg: Twist):
         # Determine if the robot is actively moving
         self.robot_is_moving = (abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01)
+
+    def yolo_callback(self, msg: String):
+        if self.is_charging or self.emergency_active:
+            return  # Skip checks while charging or if alarm is already active
+
+        try:
+            detections = json.loads(msg.data)
+        except Exception:
+            return
+
+        # Check for emergency conditions:
+        # 1. Intruder: 'person' seen while in patrol mode
+        # 2. Hazard: 'knife' or 'scissors' seen
+        for d in detections:
+            cls = d['class'].lower()
+            
+            # Condition 1: Intruder
+            if cls == "person" and self.patrol_mode:
+                self.trigger_emergency_alarm("Intruder Detected in Patrol Mode!")
+                break
+                
+            # Condition 2: Hazard
+            elif cls in ["knife", "scissors"]:
+                self.trigger_emergency_alarm(f"Hazardous Item Detected: {cls}!")
+                break
+
+    def trigger_emergency_alarm(self, reason: str):
+        if self.emergency_active:
+            return  # Already in emergency state
+            
+        self.emergency_active = True
+        self.emergency_reason = reason
+        
+        self.get_logger().error(f"!!! EMERGENCY ALERT !!! {reason} - Sounding alarms and halting robot.")
+        
+        # Stop the robot immediately
+        self.patrol_mode = False
+        self.delivery_stage = None
+        self.set_follower_mode(False)
+        self.cancel_nav2_goal()
+        
+        # Publish active braking commands
+        brake_msg = Twist()
+        self.cmd_pub.publish(brake_msg)
+        
+        # Publish Alarm topic
+        alarm_msg = Bool()
+        alarm_msg.data = True
+        self.alarm_pub.publish(alarm_msg)
+        
+        # Update markers
+        self.publish_emergency_marker()
+
+    def publish_emergency_marker(self):
+        # Publish a red warning marker in RViz
+        marker = Marker()
+        marker.header.frame_id = "base_link"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "emergency"
+        marker.id = 1
+        marker.type = Marker.TEXT_VIEW_FACING
+        marker.action = Marker.ADD
+        
+        # Position floating 0.85m above the robot base (higher than battery marker)
+        marker.pose.position.x = 0.0
+        marker.pose.position.y = 0.0
+        marker.pose.position.z = 0.85
+        marker.pose.orientation.w = 1.0
+        
+        marker.text = f"!!! EMERGENCY: {self.emergency_reason.upper()} !!!"
+        marker.scale.z = 0.15
+        
+        # Flashing red text
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+        
+        self.marker_pub.publish(marker)
 
     def simulate_battery(self):
         if self.is_charging:
@@ -219,14 +306,20 @@ class VoiceInterpreter(Node):
         command = msg.data.lower().strip()
         self.get_logger().info(f"Received voice command: '{command}'")
 
+        # Check if emergency alarm is active
+        is_clear_cmd = any(kw in command for kw in ["clear", "reset", "cancel", "all clear"])
+        if self.emergency_active and not is_clear_cmd:
+            self.get_logger().warn(f"Action Refused: Emergency Alarm is ACTIVE ({self.emergency_reason}). Please clear the alarm first!")
+            return
+
         # Check if battery is critically low
         is_battery_cmd = any(kw in command for kw in ["battery", "charge", "dock", "recharge", "refill", "restock"])
-        if self.battery_level < 10.0 and not is_battery_cmd:
+        if self.battery_level < 10.0 and not is_battery_cmd and not is_clear_cmd:
             self.get_logger().error(f"Action Refused: Battery level too low ({self.battery_level:.1f}%). Please allow the robot to charge.")
             return
 
         # Interrupt charging if executing a new command
-        if self.is_charging and not is_battery_cmd:
+        if self.is_charging and not is_battery_cmd and not is_clear_cmd:
             self.is_charging = False
             self.low_battery_triggered = False
             self.get_logger().info(f"Undocking: Interrupting charging session at {self.battery_level:.1f}% to execute new command.")
@@ -265,6 +358,30 @@ class VoiceInterpreter(Node):
             x, y, yaw = self.locations['charging_station']
             self.send_nav2_goal(x, y, yaw)
 
+        # 5. Alarm Reset/Clear Commands
+        elif is_clear_cmd:
+            if self.emergency_active:
+                self.emergency_active = False
+                self.emergency_reason = ""
+                
+                # Publish Alarm topic false
+                alarm_msg = Bool()
+                alarm_msg.data = False
+                self.alarm_pub.publish(alarm_msg)
+                
+                # Delete the emergency marker
+                marker = Marker()
+                marker.header.frame_id = "base_link"
+                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.ns = "emergency"
+                marker.id = 1
+                marker.action = Marker.DELETE
+                self.marker_pub.publish(marker)
+                
+                self.get_logger().info("Action: Emergency alarm successfully cleared. Resuming normal operations.")
+            else:
+                self.get_logger().info("No active alarms to clear.")
+
         # 5. Delivery Commands
         elif any(kw in command for kw in ["deliver", "bring", "get", "fetch"]):
             self.patrol_mode = False
@@ -273,7 +390,7 @@ class VoiceInterpreter(Node):
             
             # Determine item type and pickup location
             item = "water bottle" if "water" in command else "medicine"
-            source = "kitchen" if item == "water bottle" else "living room"
+            source = "kitchen_counter" if item == "water bottle" else "medicine_cabinet"
             
             # Check counter inventory database
             if self.inventory[item] <= 0:
@@ -282,8 +399,8 @@ class VoiceInterpreter(Node):
             
             # Determine destination location
             destination = "bedroom" if item == "medicine" else "living room"
-            for room in self.locations.keys():
-                if room in command and room != source:
+            for room in ["kitchen", "bedroom", "living room"]:
+                if room in command:
                     destination = room
                     break
                     
