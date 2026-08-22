@@ -68,6 +68,12 @@ class VoiceInterpreter(Node):
         self.delivery_destination = None
         self.delivery_stage = None  # "GO_TO_SOURCE", "PICKING_UP", "GO_TO_DESTINATION"
         self.pickup_timer = None
+        
+        # Item counter / inventory database
+        self.inventory = {
+            'water bottle': 3,
+            'medicine': 2
+        }
 
         # Service client for setting follower parameters
         self.param_client = self.create_client(SetParameters, '/person_follower/set_parameters')
@@ -132,6 +138,11 @@ class VoiceInterpreter(Node):
             item = "water bottle" if "water" in command else "medicine"
             source = "kitchen" if item == "water bottle" else "living room"
             
+            # Check counter inventory database
+            if self.inventory[item] <= 0:
+                self.get_logger().error(f"Action Aborted: '{item}' is OUT OF STOCK on the counter/storage! Please restock it first.")
+                return
+            
             # Determine destination location
             destination = "bedroom" if item == "medicine" else "living room"
             for room in self.locations.keys():
@@ -145,8 +156,25 @@ class VoiceInterpreter(Node):
             self.delivery_stage = "GO_TO_SOURCE"
             
             x, y, yaw = self.locations[source]
-            self.get_logger().info(f"Action: Starting delivery workflow. Retrieve {item} from {source} and deliver to {destination}.")
+            self.get_logger().info(f"Action: Starting delivery workflow. Retrieve {item} from {source} (Stock: {self.inventory[item]}) and deliver to {destination}.")
             self.send_nav2_goal(x, y, yaw)
+
+        # 4. Restocking Commands
+        elif any(kw in command for kw in ["restock", "refill"]):
+            self.patrol_mode = False
+            self.set_follower_mode(False)
+            self.cancel_nav2_goal()
+            
+            if "water" in command:
+                self.inventory['water bottle'] = 3
+                self.get_logger().info("Action: Kitchen counter successfully restocked to 3 water bottles.")
+            elif "medicine" in command:
+                self.inventory['medicine'] = 2
+                self.get_logger().info("Action: Medicine cabinet successfully restocked to 2 units.")
+            else:
+                self.inventory['water bottle'] = 3
+                self.inventory['medicine'] = 2
+                self.get_logger().info("Action: All item storage counters successfully restocked.")
 
         # 4. Navigation Commands
         elif any(room in command for room in self.locations.keys()):
@@ -252,6 +280,10 @@ class VoiceInterpreter(Node):
             self.pickup_timer = None
             
         if self.delivery_stage == "PICKING_UP":
+            # Decrement inventory upon successful pickup
+            self.inventory[self.delivery_item] -= 1
+            self.get_logger().info(f"Successfully grabbed {self.delivery_item}! (Remaining stock on counter: {self.inventory[self.delivery_item]})")
+            
             self.delivery_stage = "GO_TO_DESTINATION"
             x, y, yaw = self.locations[self.delivery_destination]
             self.get_logger().info(f"Item loaded. Navigating to destination: '{self.delivery_destination}'...")
