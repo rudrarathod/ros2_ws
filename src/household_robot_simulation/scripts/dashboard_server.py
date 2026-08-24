@@ -6,6 +6,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+import numpy as np
 import threading
 import json
 import time
@@ -16,6 +17,44 @@ app = Flask(__name__)
 
 # Global node reference
 node = None
+
+def create_standby_frame(text="WAITING FOR CAMERA FEED", subtext="Topic: /camera/image_raw"):
+    img = np.zeros((480, 640, 3), dtype=np.uint8)
+    img[:] = (18, 18, 24)  # dark modern background
+    
+    # Grid pattern (subtle)
+    for y in range(0, 480, 40):
+        cv2.line(img, (0, y), (640, y), (26, 26, 34), 1)
+    for x in range(0, 640, 40):
+        cv2.line(img, (x, 0), (x, 480), (26, 26, 34), 1)
+
+    # Viewfinder corners
+    c_len = 25
+    c_color = (99, 102, 241) # indigo
+    cv2.line(img, (30, 30), (30 + c_len, 30), c_color, 2)
+    cv2.line(img, (30, 30), (30, 30 + c_len), c_color, 2)
+    cv2.line(img, (610, 30), (610 - c_len, 30), c_color, 2)
+    cv2.line(img, (610, 30), (610, 30 + c_len), c_color, 2)
+    cv2.line(img, (30, 450), (30 + c_len, 450), c_color, 2)
+    cv2.line(img, (30, 450), (30, 450 - c_len), c_color, 2)
+    cv2.line(img, (610, 450), (610 - c_len, 450), c_color, 2)
+    cv2.line(img, (610, 450), (610, 450 - c_len), c_color, 2)
+
+    # Center crosshair
+    cv2.circle(img, (320, 240), 30, (50, 50, 65), 1)
+    cv2.line(img, (310, 240), (330, 240), (99, 102, 241), 1)
+    cv2.line(img, (320, 230), (320, 250), (99, 102, 241), 1)
+
+    # Text overlay
+    cv2.putText(img, text, (170, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 225, 230), 2, cv2.LINE_AA)
+    cv2.putText(img, subtext, (190, 290), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (140, 145, 155), 1, cv2.LINE_AA)
+    cv2.putText(img, "RESOLUTION: 640x480 | 30 FPS", (205, 315), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 105, 115), 1, cv2.LINE_AA)
+
+    _, jpeg = cv2.imencode('.jpg', img)
+    return jpeg.tobytes()
+
+STANDBY_RAW_FRAME = create_standby_frame("STANDBY - NO RAW FEED", "Awaiting: /camera/image_raw")
+STANDBY_PROC_FRAME = create_standby_frame("STANDBY - NO PROCESSED FEED", "Awaiting: /camera/image_processed")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -62,18 +101,77 @@ HTML_TEMPLATE = """
         
         <!-- Left Side: Live Video Feed (7 Cols) -->
         <div class="lg:col-span-7 flex flex-col space-y-4">
-            <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col flex-1">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
                 <div class="border-b border-zinc-800 bg-zinc-900/50 px-5 py-3.5 flex justify-between items-center">
-                    <h2 class="font-semibold text-sm flex items-center space-x-2 text-zinc-200">
-                        <i class="fa-solid fa-video text-indigo-400"></i>
-                        <span>Live YOLO Camera Feed</span>
-                    </h2>
-                    <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-medium font-mono">30 FPS</span>
+                    <div class="flex items-center space-x-2.5">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <h2 class="font-semibold text-sm flex items-center space-x-2 text-zinc-200">
+                            <i class="fa-solid fa-video text-indigo-400"></i>
+                            <span id="camera-feed-title">Live Camera Feed (Raw)</span>
+                        </h2>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="inline-flex bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 text-xs">
+                            <button id="btn-feed-raw" onclick="setFeedType('raw')" class="px-2.5 py-1 rounded-md font-medium text-white bg-indigo-600 transition">Raw</button>
+                            <button id="btn-feed-processed" onclick="setFeedType('processed')" class="px-2.5 py-1 rounded-md font-medium text-zinc-400 hover:text-zinc-200 transition">AI / Processed</button>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-medium font-mono">640x480</span>
+                        <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-medium font-mono">30 FPS</span>
+                    </div>
                 </div>
-                <div class="relative bg-zinc-950 flex-1 flex items-center justify-center min-h-[400px] overflow-hidden">
-                    <img id="camera-feed" src="/video_feed" alt="Camera Feed" class="w-full h-full object-cover">
+
+                <!-- Proper 4:3 Camera Viewport -->
+                <div class="relative bg-zinc-950 w-full aspect-[4/3] flex items-center justify-center overflow-hidden border-b border-zinc-800/80">
+                    <img id="camera-feed" src="/video_feed?type=raw" alt="Camera Feed" class="w-full h-full object-contain">
+                    
+                    <!-- Viewfinder HUD Corner Accents -->
+                    <div class="absolute inset-4 pointer-events-none flex flex-col justify-between p-2">
+                        <div class="flex justify-between">
+                            <div class="w-4 h-4 border-t-2 border-l-2 border-indigo-500/70"></div>
+                            <div class="w-4 h-4 border-t-2 border-r-2 border-indigo-500/70"></div>
+                        </div>
+                        <!-- Center Reticle -->
+                        <div class="self-center flex items-center justify-center opacity-30">
+                            <div class="w-6 h-0.5 bg-indigo-400"></div>
+                            <div class="w-0.5 h-6 bg-indigo-400 absolute"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <div class="w-4 h-4 border-b-2 border-l-2 border-indigo-500/70"></div>
+                            <div class="w-4 h-4 border-b-2 border-r-2 border-indigo-500/70"></div>
+                        </div>
+                    </div>
+
+                    <!-- HUD Status Tag -->
+                    <div class="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/10 text-[11px] font-mono text-zinc-300 flex items-center space-x-1.5 pointer-events-none">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span id="hud-feed-label">CAM: RAW (/camera/image_raw)</span>
+                    </div>
+
                     <!-- Emergency Overlay -->
-                    <div id="alarm-overlay" class="hidden absolute inset-0 bg-red-950/20 border-4 border-red-500 animate-pulse pointer-events-none"></div>
+                    <div id="alarm-overlay" class="hidden absolute inset-0 bg-red-950/40 border-4 border-red-500 animate-pulse pointer-events-none flex items-center justify-center">
+                        <div class="bg-red-900/90 text-white font-bold px-4 py-2 rounded-lg text-sm tracking-wider uppercase border border-red-500 shadow-2xl flex items-center space-x-2">
+                            <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+                            <span>EMERGENCY OBSTACLE STOP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feed Quick Info Bar -->
+                <div class="px-5 py-2.5 bg-zinc-900/70 text-xs text-zinc-400 flex justify-between items-center border-t border-zinc-800/50 font-mono">
+                    <div class="flex items-center space-x-3">
+                        <span>FOV: 60°</span>
+                        <span>•</span>
+                        <span>Format: RGB8</span>
+                        <span>•</span>
+                        <span>Ratio: 4:3</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5 text-zinc-400">
+                        <i class="fa-solid fa-signal text-emerald-400 text-[10px]"></i>
+                        <span class="text-zinc-300">Live Stream</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -353,6 +451,29 @@ HTML_TEMPLATE = """
             }
         };
 
+        // Video Feed Switcher
+        function setFeedType(type) {
+            const btnRaw = document.getElementById("btn-feed-raw");
+            const btnProc = document.getElementById("btn-feed-processed");
+            const title = document.getElementById("camera-feed-title");
+            const hudLabel = document.getElementById("hud-feed-label");
+            const feedImg = document.getElementById("camera-feed");
+            
+            if (type === 'raw') {
+                btnRaw.className = "px-2.5 py-1 rounded-md font-medium text-white bg-indigo-600 transition";
+                btnProc.className = "px-2.5 py-1 rounded-md font-medium text-zinc-400 hover:text-zinc-200 transition";
+                title.innerText = "Live Camera Feed (Raw)";
+                if (hudLabel) hudLabel.innerText = "CAM: RAW (/camera/image_raw)";
+                feedImg.src = "/video_feed?type=raw";
+            } else {
+                btnProc.className = "px-2.5 py-1 rounded-md font-medium text-white bg-indigo-600 transition";
+                btnRaw.className = "px-2.5 py-1 rounded-md font-medium text-zinc-400 hover:text-zinc-200 transition";
+                title.innerText = "Live Camera Feed (AI Processed)";
+                if (hudLabel) hudLabel.innerText = "CAM: AI (/camera/image_processed)";
+                feedImg.src = "/video_feed?type=processed";
+            }
+        }
+
         // Post Command API Call
         function sendCommand(cmd) {
             fetch("/api/command", {
@@ -407,6 +528,8 @@ class DashboardNode(Node):
         self.emergency_active = False
         self.current_pose = {'x': 0.0, 'y': 0.0, 'theta': 0.0}
         self.current_speed = {'linear': 0.0, 'angular': 0.0}
+        self.raw_frame = None
+        self.processed_frame = None
         self.latest_frame = None
         self.command_history = []
         self.max_history = 10
@@ -427,15 +550,17 @@ class DashboardNode(Node):
             Bool, '/emergency/alarm', self.emergency_callback, 10)
         self.odom_sub = self.create_subscription(
             Odometry, '/odometry/filtered', self.odom_callback, 10)
-        self.image_sub = self.create_subscription(
-            Image, '/camera/image_processed', self.image_callback, 10)
+        self.raw_image_sub = self.create_subscription(
+            Image, '/camera/image_raw', self.raw_image_callback, 10)
+        self.processed_image_sub = self.create_subscription(
+            Image, '/camera/image_processed', self.processed_image_callback, 10)
         self.cmd_sub = self.create_subscription(
             String, '/voice/command', self.command_callback, 10)
             
         # Publisher to trigger actions
         self.cmd_pub = self.create_publisher(String, '/voice/command', 10)
         
-        self.get_logger().info("Dashboard ROS 2 Node Initialized with Performance Logs.")
+        self.get_logger().info("Dashboard ROS 2 Node Initialized with Raw/Processed Camera Feeds.")
 
     def battery_callback(self, msg: Float32):
         self.battery_level = msg.data
@@ -474,11 +599,20 @@ class DashboardNode(Node):
                 self.active_duration += dt
         self.last_time = now
 
-    def image_callback(self, msg: Image):
+    def raw_image_callback(self, msg: Image):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             _, jpeg = cv2.imencode('.jpg', cv_image)
-            self.latest_frame = jpeg.tobytes()
+            self.raw_frame = jpeg.tobytes()
+            self.latest_frame = self.raw_frame
+        except Exception as e:
+            pass
+
+    def processed_image_callback(self, msg: Image):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            _, jpeg = cv2.imencode('.jpg', cv_image)
+            self.processed_frame = jpeg.tobytes()
         except Exception as e:
             pass
 
@@ -513,18 +647,26 @@ class DashboardNode(Node):
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-def gen_frames():
+def gen_frames(feed_type='raw'):
     while True:
-        if node and node.latest_frame is not None:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + node.latest_frame + b'\r\n')
+        frame = None
+        if node:
+            if feed_type == 'processed':
+                frame = node.processed_frame if node.processed_frame is not None else STANDBY_PROC_FRAME
+            else:
+                # Default to raw camera frame
+                frame = node.raw_frame if node.raw_frame is not None else STANDBY_RAW_FRAME
         else:
-            time.sleep(0.1)
+            frame = STANDBY_RAW_FRAME
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
         time.sleep(0.033)  # ~30 FPS
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    feed_type = request.args.get('type', 'raw')
+    return Response(gen_frames(feed_type), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/telemetry')
 def telemetry():
