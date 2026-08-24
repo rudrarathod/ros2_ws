@@ -332,6 +332,21 @@
       <static>true</static>
     </include>
 
+    <!-- Dining Set Restricted Keepout Barrier (Invisible Solid Barrier under Table & Chairs) -->
+    <model name="dining_red_zone_keepout">
+      <static>true</static>
+      <pose>2.0 2.0 0.20 0 0 0</pose>
+      <link name="red_zone_link">
+        <collision name="red_zone_collision">
+          <geometry>
+            <box>
+              <size>2.6 2.3 0.40</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
     <!-- ==================== Bathroom Section ==================== -->
     <!-- Bathtub along the west wall -->
     <include>
@@ -376,7 +391,7 @@
 
     <!-- Controlled Human Target -->
     <model name="human_target">
-      <pose>2.2 0.3 0.1 0 0 3.14159</pose>
+      <pose>2.6 -3.3 0.1 0 0 1.57</pose>
       <link name="link">
         <inertial>
           <mass>1.0</mass>

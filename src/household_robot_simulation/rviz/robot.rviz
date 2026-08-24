@@ -83,6 +83,10 @@ Visualization Manager:
       Topic: /safety_zone_marker
       Enabled: true
       Name: SafetyZone
+    - Class: rviz_default_plugins/Marker
+      Topic: /battery/marker
+      Enabled: true
+      Name: BatteryHUD
     - Class: rviz_default_plugins/Map
       Topic: /map
       Update Topic: /map_updates

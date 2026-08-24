@@ -11,7 +11,7 @@ Translates commands to robot actions:
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float32, Bool
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 import json
 from geometry_msgs.msg import Twist, PoseStamped
 from rclpy.action import ActionClient
