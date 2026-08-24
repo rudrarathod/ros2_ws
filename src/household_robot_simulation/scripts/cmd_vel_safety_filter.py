@@ -23,7 +23,7 @@ class CmdVelSafetyFilter(Node):
         super().__init__('cmd_vel_safety_filter')
         
         # Parameters
-        self.declare_parameter('safety_padding', 0.35)  # 0.20m robot radius + 0.15m buffer
+        self.declare_parameter('safety_padding', 0.28)  # 0.20m robot radius + 0.08m dynamic buffer
         self.safety_padding = self.get_parameter('safety_padding').value
         
         # State

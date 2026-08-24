@@ -38,11 +38,11 @@ class PersonFollower(Node):
         # Declare parameters for easy tuning
         self.declare_parameter('follow_mode', False)
         self.declare_parameter('target_area_fraction', 0.08)  # Desired bbox area fraction of image (e.g., 8%)
-        self.declare_parameter('max_linear_speed', 0.25)      # Maximum forward/backward speed (m/s)
-        self.declare_parameter('max_angular_speed', 0.6)      # Maximum turning speed (rad/s)
-        self.declare_parameter('Kp_linear', 0.6)              # Proportional gain for linear velocity
-        self.declare_parameter('Kp_angular', 1.2)             # Proportional gain for angular velocity
-        self.declare_parameter('search_angular_speed', 0.3)   # Search rotation speed (rad/s)
+        self.declare_parameter('max_linear_speed', 0.85)      # Maximum forward/backward speed (m/s)
+        self.declare_parameter('max_angular_speed', 2.0)       # Maximum turning speed (rad/s)
+        self.declare_parameter('Kp_linear', 1.2)              # Proportional gain for linear velocity
+        self.declare_parameter('Kp_angular', 2.2)             # Proportional gain for angular velocity
+        self.declare_parameter('search_angular_speed', 1.2)   # Search rotation speed (rad/s)
         self.declare_parameter('lost_timeout', 2.0)           # Time in seconds before declaring person lost
         self.declare_parameter('avoidance_distance', 0.55)    # Distance threshold to start avoiding obstacles (m)
         self.declare_parameter('Kp_avoidance', 1.0)           # Proportional gain for obstacle repulsion force
