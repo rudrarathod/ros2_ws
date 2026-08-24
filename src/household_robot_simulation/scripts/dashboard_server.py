@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float32, Bool
+from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -171,6 +172,89 @@ HTML_TEMPLATE = """
                     <div class="flex items-center space-x-1.5 text-zinc-400">
                         <i class="fa-solid fa-signal text-emerald-400 text-[10px]"></i>
                         <span class="text-zinc-300">Live Stream</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Teleoperation Controller Card -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex justify-between items-center border-b border-zinc-800/80 pb-3">
+                    <h2 class="font-semibold text-sm text-zinc-200 flex items-center space-x-2">
+                        <i class="fa-solid fa-gamepad text-indigo-400"></i>
+                        <span>Manual Teleop Controller</span>
+                    </h2>
+                    <span class="px-2.5 py-0.5 rounded bg-indigo-950/60 text-indigo-400 border border-indigo-900/60 text-[11px] font-mono font-semibold flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+                        <span>HOLD WASD / ARROWS</span>
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                    <!-- Left: On-Screen D-Pad -->
+                    <div class="md:col-span-5 flex justify-center">
+                        <div class="grid grid-cols-3 gap-2 w-44 select-none">
+                            <div></div>
+                            <button id="btn-dpad-w" title="Forward (W / Up Arrow)" class="p-3.5 bg-zinc-800 hover:bg-indigo-600 active:bg-indigo-500 rounded-xl text-zinc-200 hover:text-white font-bold flex flex-col items-center justify-center transition touch-none shadow-md border border-zinc-700 select-none">
+                                <i class="fa-solid fa-arrow-up text-lg"></i>
+                                <span class="text-[10px] font-mono opacity-60">W</span>
+                            </button>
+                            <div></div>
+
+                            <button id="btn-dpad-a" title="Turn Left (A / Left Arrow)" class="p-3.5 bg-zinc-800 hover:bg-indigo-600 active:bg-indigo-500 rounded-xl text-zinc-200 hover:text-white font-bold flex flex-col items-center justify-center transition touch-none shadow-md border border-zinc-700 select-none">
+                                <i class="fa-solid fa-arrow-left text-lg"></i>
+                                <span class="text-[10px] font-mono opacity-60">A</span>
+                            </button>
+                            <button id="btn-dpad-stop" title="Emergency Active Stop (Space)" class="p-3.5 bg-red-950/40 hover:bg-red-600 active:bg-red-500 text-red-400 hover:text-white rounded-xl font-bold flex flex-col items-center justify-center transition border border-red-800/60 shadow-md select-none">
+                                <i class="fa-solid fa-stop text-lg"></i>
+                                <span class="text-[10px] font-mono opacity-80">STOP</span>
+                            </button>
+                            <button id="btn-dpad-d" title="Turn Right (D / Right Arrow)" class="p-3.5 bg-zinc-800 hover:bg-indigo-600 active:bg-indigo-500 rounded-xl text-zinc-200 hover:text-white font-bold flex flex-col items-center justify-center transition touch-none shadow-md border border-zinc-700 select-none">
+                                <i class="fa-solid fa-arrow-right text-lg"></i>
+                                <span class="text-[10px] font-mono opacity-60">D</span>
+                            </button>
+
+                            <div></div>
+                            <button id="btn-dpad-s" title="Backward (S / Down Arrow)" class="p-3.5 bg-zinc-800 hover:bg-indigo-600 active:bg-indigo-500 rounded-xl text-zinc-200 hover:text-white font-bold flex flex-col items-center justify-center transition touch-none shadow-md border border-zinc-700 select-none">
+                                <i class="fa-solid fa-arrow-down text-lg"></i>
+                                <span class="text-[10px] font-mono opacity-60">S</span>
+                            </button>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Velocity Calibration & Keyboard Guide -->
+                    <div class="md:col-span-7 flex flex-col justify-between space-y-3.5 border-t md:border-t-0 md:border-l border-zinc-800/80 md:pl-5 pt-3 md:pt-0">
+                        <!-- Linear Speed Slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                <span class="text-zinc-400">Linear Velocity</span>
+                                <span id="label-linear-speed" class="mono text-indigo-400 font-bold">1.0 m/s</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="adjustSpeed(-0.2, 0)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-lg text-xs text-zinc-300 font-mono font-bold flex items-center justify-center border border-zinc-700 transition">-</button>
+                                <input id="slider-linear-speed" type="range" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full accent-indigo-500 cursor-pointer" oninput="updateSpeedFromSlider()">
+                                <button onclick="adjustSpeed(0.2, 0)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-lg text-xs text-zinc-300 font-mono font-bold flex items-center justify-center border border-zinc-700 transition">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Angular Speed Slider -->
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1.5">
+                                <span class="text-zinc-400">Angular Velocity</span>
+                                <span id="label-angular-speed" class="mono text-indigo-400 font-bold">2.0 rad/s</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="adjustSpeed(0, -0.5)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-lg text-xs text-zinc-300 font-mono font-bold flex items-center justify-center border border-zinc-700 transition">-</button>
+                                <input id="slider-angular-speed" type="range" min="0.5" max="5.0" step="0.5" value="2.0" class="w-full accent-indigo-500 cursor-pointer" oninput="updateSpeedFromSlider()">
+                                <button onclick="adjustSpeed(0, 0.5)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-lg text-xs text-zinc-300 font-mono font-bold flex items-center justify-center border border-zinc-700 transition">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Live Key Feedback / Instructions -->
+                        <div class="text-[11px] text-zinc-400 bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-800 flex items-center space-x-2.5">
+                            <i class="fa-solid fa-keyboard text-indigo-400 text-sm"></i>
+                            <span><b>WASD</b> / <b>Arrows</b> to drive • <b>Space</b> to Stop • <b>+/-</b> to adjust speed.</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -513,6 +597,204 @@ HTML_TEMPLATE = """
             const voiceCmd = `deliver ${item} to ${dest}`;
             sendCommand(voiceCmd);
         }
+
+        // ==========================================
+        // MANUAL TELEOP CONTROLLER LOGIC (WASD & DPAD)
+        // ==========================================
+        let linearSpeed = 1.0;
+        let angularSpeed = 2.0;
+        let activeKeys = new Set();
+        let mouseDriveDirection = null;
+        let driveTimer = null;
+
+        function updateSpeedFromSlider() {
+            linearSpeed = parseFloat(document.getElementById("slider-linear-speed").value);
+            angularSpeed = parseFloat(document.getElementById("slider-angular-speed").value);
+            document.getElementById("label-linear-speed").innerText = linearSpeed.toFixed(1) + " m/s";
+            document.getElementById("label-angular-speed").innerText = angularSpeed.toFixed(1) + " rad/s";
+        }
+
+        function adjustSpeed(linDelta, angDelta) {
+            const linInput = document.getElementById("slider-linear-speed");
+            const angInput = document.getElementById("slider-angular-speed");
+            if (linDelta !== 0) {
+                linInput.value = Math.max(0.2, Math.min(3.0, parseFloat(linInput.value) + linDelta)).toFixed(1);
+            }
+            if (angDelta !== 0) {
+                angInput.value = Math.max(0.5, Math.min(5.0, parseFloat(angInput.value) + angDelta)).toFixed(1);
+            }
+            updateSpeedFromSlider();
+        }
+
+        function sendTwist(linear, angular) {
+            fetch("/api/teleop", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ linear: linear, angular: angular })
+            }).catch(err => console.error("Teleop API error:", err));
+        }
+
+        function calculateVelocity() {
+            let lin = 0.0;
+            let ang = 0.0;
+
+            // 1. Mouse/touch hold direction
+            if (mouseDriveDirection) {
+                if (mouseDriveDirection === 'forward') lin += linearSpeed;
+                if (mouseDriveDirection === 'backward') lin -= linearSpeed;
+                if (mouseDriveDirection === 'left') ang += angularSpeed;
+                if (mouseDriveDirection === 'right') ang -= angularSpeed;
+                return { linear: lin, angular: ang };
+            }
+
+            // 2. Keyboard held keys
+            if (activeKeys.has('w') || activeKeys.has('arrowup')) lin += linearSpeed;
+            if (activeKeys.has('s') || activeKeys.has('arrowdown')) lin -= linearSpeed;
+            if (activeKeys.has('a') || activeKeys.has('arrowleft')) ang += angularSpeed;
+            if (activeKeys.has('d') || activeKeys.has('arrowright')) ang -= angularSpeed;
+
+            return { linear: lin, angular: ang };
+        }
+
+        function setBtnActive(id, active) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            if (active) {
+                btn.classList.add('bg-indigo-600', 'text-white', 'scale-95', 'shadow-indigo-500/50');
+                btn.classList.remove('bg-zinc-800', 'text-zinc-200');
+            } else {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'scale-95', 'shadow-indigo-500/50');
+                btn.classList.add('bg-zinc-800', 'text-zinc-200');
+            }
+        }
+
+        function updateDpadVisuals() {
+            const isFwd = activeKeys.has('w') || activeKeys.has('arrowup') || mouseDriveDirection === 'forward';
+            const isBwd = activeKeys.has('s') || activeKeys.has('arrowdown') || mouseDriveDirection === 'backward';
+            const isLeft = activeKeys.has('a') || activeKeys.has('arrowleft') || mouseDriveDirection === 'left';
+            const isRight = activeKeys.has('d') || activeKeys.has('arrowright') || mouseDriveDirection === 'right';
+
+            setBtnActive('btn-dpad-w', isFwd);
+            setBtnActive('btn-dpad-s', isBwd);
+            setBtnActive('btn-dpad-a', isLeft);
+            setBtnActive('btn-dpad-d', isRight);
+        }
+
+        function driveLoop() {
+            const vel = calculateVelocity();
+            if (vel.linear !== 0.0 || vel.angular !== 0.0) {
+                sendTwist(vel.linear, vel.angular);
+            } else {
+                sendTwist(0.0, 0.0);
+                if (driveTimer) {
+                    clearInterval(driveTimer);
+                    driveTimer = null;
+                }
+            }
+            updateDpadVisuals();
+        }
+
+        function startDriving() {
+            if (!driveTimer) {
+                driveLoop();
+                driveTimer = setInterval(driveLoop, 100);
+            }
+        }
+
+        function stopDriving() {
+            activeKeys.clear();
+            mouseDriveDirection = null;
+            if (driveTimer) {
+                clearInterval(driveTimer);
+                driveTimer = null;
+            }
+            sendTwist(0.0, 0.0);
+            updateDpadVisuals();
+        }
+
+        // Attach mouse & touch holding listeners to D-Pad buttons
+        function attachHoldingListener(btnId, direction) {
+            const el = document.getElementById(btnId);
+            if (!el) return;
+
+            const startHold = (e) => {
+                e.preventDefault();
+                mouseDriveDirection = direction;
+                startDriving();
+            };
+
+            const endHold = (e) => {
+                e.preventDefault();
+                if (mouseDriveDirection === direction) {
+                    mouseDriveDirection = null;
+                    if (activeKeys.size === 0) {
+                        stopDriving();
+                    } else {
+                        driveLoop();
+                    }
+                }
+            };
+
+            el.addEventListener('mousedown', startHold);
+            el.addEventListener('mouseup', endHold);
+            el.addEventListener('mouseleave', endHold);
+            el.addEventListener('touchstart', startHold, { passive: false });
+            el.addEventListener('touchend', endHold, { passive: false });
+            el.addEventListener('touchcancel', endHold, { passive: false });
+        }
+
+        attachHoldingListener('btn-dpad-w', 'forward');
+        attachHoldingListener('btn-dpad-s', 'backward');
+        attachHoldingListener('btn-dpad-a', 'left');
+        attachHoldingListener('btn-dpad-d', 'right');
+
+        const stopBtn = document.getElementById('btn-dpad-stop');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                stopDriving();
+            });
+        }
+
+        // Window keyboard listeners for continuous holding
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            const key = e.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
+                e.preventDefault();
+                if (key === ' ') {
+                    stopDriving();
+                    return;
+                }
+                if (!activeKeys.has(key)) {
+                    activeKeys.add(key);
+                    startDriving();
+                }
+            } else if (key === '+' || key === '=') {
+                adjustSpeed(0.2, 0.5);
+            } else if (key === '-') {
+                adjustSpeed(-0.2, -0.5);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            const key = e.key.toLowerCase();
+            if (activeKeys.has(key)) {
+                activeKeys.delete(key);
+                if (activeKeys.size === 0 && !mouseDriveDirection) {
+                    stopDriving();
+                } else {
+                    driveLoop();
+                }
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            stopDriving();
+        });
     </script>
 </body>
 </html>
@@ -543,6 +825,10 @@ class DashboardNode(Node):
         self.start_battery = 100.0
         self.battery_used = 0.0
         
+        # Teleop State & Watchdog
+        self.last_teleop_time = 0.0
+        self.is_teleop_active = False
+        
         # Subscriptions
         self.battery_sub = self.create_subscription(
             Float32, '/battery/percentage', self.battery_callback, 10)
@@ -560,7 +846,40 @@ class DashboardNode(Node):
         # Publisher to trigger actions
         self.cmd_pub = self.create_publisher(String, '/voice/command', 10)
         
-        self.get_logger().info("Dashboard ROS 2 Node Initialized with Raw/Processed Camera Feeds.")
+        # Publisher for raw teleop velocity commands
+        self.twist_pub = self.create_publisher(Twist, '/cmd_vel_raw', 10)
+        self.teleop_watchdog = self.create_timer(0.1, self.teleop_watchdog_callback)
+        
+        self.get_logger().info("Dashboard ROS 2 Node Initialized with Manual Teleop & Feeds.")
+
+    def teleop_watchdog_callback(self):
+        # Stop robot if teleop command has stopped streaming for > 0.35 seconds
+        if self.is_teleop_active and (time.time() - self.last_teleop_time > 0.35):
+            stop_twist = Twist()
+            self.twist_pub.publish(stop_twist)
+            self.is_teleop_active = False
+            self.current_state = "Idle"
+
+    def publish_twist(self, linear: float, angular: float):
+        msg = Twist()
+        msg.linear.x = float(linear)
+        msg.angular.z = float(angular)
+        self.twist_pub.publish(msg)
+        self.last_teleop_time = time.time()
+        
+        if abs(linear) > 0.001 or abs(angular) > 0.001:
+            self.is_teleop_active = True
+            if linear > 0.0:
+                self.current_state = "Manual Driving (Forward)"
+            elif linear < 0.0:
+                self.current_state = "Manual Driving (Backward)"
+            elif angular > 0.0:
+                self.current_state = "Manual Turning (Left)"
+            elif angular < 0.0:
+                self.current_state = "Manual Turning (Right)"
+        else:
+            self.is_teleop_active = False
+            self.current_state = "Manual Stopped"
 
     def battery_callback(self, msg: Float32):
         self.battery_level = msg.data
@@ -687,6 +1006,16 @@ def telemetry():
                 yield f"data: {json.dumps(data)}\n\n"
             time.sleep(0.2)  # 5Hz updates
     return Response(event_stream(), mimetype='text/event-stream')
+
+@app.route('/api/teleop', methods=['POST'])
+def manual_teleop():
+    data = request.json or {}
+    linear = float(data.get('linear', 0.0))
+    angular = float(data.get('angular', 0.0))
+    if node:
+        node.publish_twist(linear, angular)
+        return jsonify({'status': 'success', 'linear': linear, 'angular': angular})
+    return jsonify({'status': 'error', 'message': 'ROS Node not ready'}), 400
 
 @app.route('/api/command', methods=['POST'])
 def send_command():
