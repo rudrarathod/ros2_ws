@@ -291,13 +291,6 @@
       <static>true</static>
     </include>
 
-    <!-- Coffee Table in front of Couch -->
-    <include>
-      <name>living_coffee_table</name>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/coffeetable</uri>
-      <pose>2.5 -1.2 0 0 0 0</pose>
-      <static>true</static>
-    </include>
 
     <!-- Bookshelf in Living Room Corner -->
     <include>
@@ -307,30 +300,6 @@
       <static>true</static>
     </include>
 
-    <!-- Dining Area (Top Right Area) -->
-    <!-- Dining Table at (2.0, 2.0, 0) -->
-    <include>
-      <name>dining_table</name>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Dining Table</uri>
-      <pose>2.0 2.0 0 0 0 0</pose>
-      <static>true</static>
-    </include>
-
-    <!-- Chair 1 (Left of table, facing right) -->
-    <include>
-      <name>dining_chair_left</name>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/chair</uri>
-      <pose>1.2 2.0 0 0 0 1.57</pose>
-      <static>true</static>
-    </include>
-
-    <!-- Chair 2 (Right of table, facing left) -->
-    <include>
-      <name>dining_chair_right</name>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/chair</uri>
-      <pose>2.8 2.0 0 0 0 -1.57</pose>
-      <static>true</static>
-    </include>
 
     <!-- ==================== Bathroom Section ==================== -->
     <!-- Bathtub along the west wall -->
@@ -365,6 +334,200 @@
       <pose>0.5 3.5 0 0 0 -1.57</pose>
       <static>true</static>
     </include>
+
+    <!-- Kitchen Countertop with Cabinets between Oven and Sink -->
+    <model name="kitchen_cabinets_countertop">
+      <static>true</static>
+      <pose>2.0 3.55 0 0 0 0</pose>
+      <link name="link">
+        <!-- Main Physical Collision Box for LIDAR & Navigation -->
+        <collision name="counter_collision">
+          <pose>0 0 0.44 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.2 0.65 0.88</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Recessed Plinth / Toe Kick -->
+        <visual name="toe_kick_visual">
+          <pose>0 0.05 0.05 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.18 0.55 0.10</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Carcass / Body -->
+        <visual name="cabinet_body_visual">
+          <pose>0 0 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.2 0.63 0.74</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.48 0.35 0.24 1</ambient>
+            <diffuse>0.62 0.46 0.32 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 1 (Leftmost) -->
+        <visual name="cabinet_door_1_visual">
+          <pose>-0.81 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 2 -->
+        <visual name="cabinet_door_2_visual">
+          <pose>-0.27 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 3 -->
+        <visual name="cabinet_door_3_visual">
+          <pose>0.27 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 4 (Rightmost) -->
+        <visual name="cabinet_door_4_visual">
+          <pose>0.81 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Door Handles (Modern Brushed Metal) -->
+        <visual name="handle_1_visual">
+          <pose>-0.60 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_2_visual">
+          <pose>-0.48 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_3_visual">
+          <pose>0.48 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_4_visual">
+          <pose>0.60 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <!-- Polished Quartz/Marble Countertop (Kitchen Top) -->
+        <visual name="countertop_slab_visual">
+          <pose>0 -0.01 0.86 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.22 0.68 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.88 0.89 0.90 1</ambient>
+            <diffuse>0.92 0.93 0.94 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+
+        <!-- Backsplash Upstand along North Wall -->
+        <visual name="backsplash_visual">
+          <pose>0 0.32 0.91 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.22 0.02 0.06</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.88 0.89 0.90 1</ambient>
+            <diffuse>0.92 0.93 0.94 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
 
     <!-- Kitchen Sink along the north wall -->
     <include>

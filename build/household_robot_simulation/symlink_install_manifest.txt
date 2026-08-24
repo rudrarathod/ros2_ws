@@ -9,10 +9,9 @@
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/nav2_params.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/semantic_locations.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/slam_toolbox_params.yaml
-/home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/maps/house_map.pgm
-/home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/maps/house_map.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/materials/textures/face.jpg
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/materials/textures/qr.png
+/home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/house/meshes/house.glb
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov5n.onnx
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov8n_openvino_model/metadata.yaml
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov8n_openvino_model/yolov8n.bin
