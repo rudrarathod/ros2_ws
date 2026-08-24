@@ -12,12 +12,51 @@ import threading
 import json
 import time
 import math
+import os
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from flask import Flask, Response, render_template_string, request, jsonify
 
 app = Flask(__name__)
 
 # Global node reference
 node = None
+
+# Config File Paths (Src and Share)
+CONFIG_PATHS = [
+    '/home/rudrarathod/ros2_ws/src/household_robot_simulation/config/semantic_locations.yaml',
+]
+try:
+    pkg_share = get_package_share_directory('household_robot_simulation')
+    installed_p = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
+    if installed_p not in CONFIG_PATHS:
+        CONFIG_PATHS.append(installed_p)
+except Exception:
+    pass
+
+def load_semantic_config():
+    for p in CONFIG_PATHS:
+        if os.path.exists(p):
+            try:
+                with open(p, 'r') as f:
+                    data = yaml.safe_load(f)
+                    if isinstance(data, dict):
+                        return data
+            except Exception as e:
+                print(f"Error loading {p}: {e}")
+    return {'locations': {}, 'patrol_waypoints': []}
+
+def save_semantic_config(data):
+    success = False
+    for p in CONFIG_PATHS:
+        try:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, 'w') as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            success = True
+        except Exception as e:
+            print(f"Error saving to {p}: {e}")
+    return success
 
 def create_standby_frame(text="WAITING FOR CAMERA FEED", subtext="Topic: /camera/image_raw"):
     img = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -432,6 +471,121 @@ HTML_TEMPLATE = """
                 </div>
             </div>
         </div>
+
+        <!-- Bottom Full-Width: Semantic Locations & Patrol Manager (12 Cols) -->
+        <div class="lg:col-span-12 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-xl flex flex-col space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                        <i class="fa-solid fa-map-location-dot text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-base text-zinc-100">Semantic Locations & Patrol Path Manager</h2>
+                        <p class="text-xs text-zinc-400">Live remap room coordinates, capture robot's current pose, and construct custom patrol routes.</p>
+                    </div>
+                </div>
+
+                <!-- Tab Selector Buttons & Status -->
+                <div class="flex items-center space-x-2">
+                    <div class="inline-flex bg-zinc-950 p-1 rounded-lg border border-zinc-800 text-xs">
+                        <button id="tab-btn-locations" onclick="switchManagerTab('locations')" class="px-3 py-1.5 rounded-md font-semibold text-white bg-indigo-600 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-house-signal"></i>
+                            <span>Room Locations</span>
+                        </button>
+                        <button id="tab-btn-patrol" onclick="switchManagerTab('patrol')" class="px-3 py-1.5 rounded-md font-semibold text-zinc-400 hover:text-zinc-200 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-route"></i>
+                            <span>Patrol Waypoints</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 1: Room Locations Management -->
+            <div id="tab-pane-locations" class="space-y-4">
+                <div class="flex flex-wrap justify-between items-center gap-3">
+                    <div class="text-xs text-zinc-400">
+                        Define target rooms for voice and delivery dispatch commands (<span class="text-zinc-200 font-mono">"go to &lt;room&gt;"</span>).
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="addCurrentPoseAsRoom()" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                            <span>Save Current Pose as Room</span>
+                        </button>
+                        <button onclick="addNewRoomRow()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 border border-zinc-700">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Custom Room</span>
+                        </button>
+                        <button onclick="saveLocationsToServer()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-md">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Save Locations Database</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Locations Table -->
+                <div class="overflow-x-auto border border-zinc-800 rounded-lg bg-zinc-950">
+                    <table class="w-full text-left text-xs text-zinc-300">
+                        <thead class="bg-zinc-900/80 text-[11px] text-zinc-400 uppercase font-mono border-b border-zinc-800">
+                            <tr>
+                                <th class="p-3">Room / Location Name</th>
+                                <th class="p-3">X (meters)</th>
+                                <th class="p-3">Y (meters)</th>
+                                <th class="p-3">Yaw (rad)</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locations-table-body" class="divide-y divide-zinc-800/60 font-mono">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Custom Patrol Waypoints Management -->
+            <div id="tab-pane-patrol" class="hidden space-y-4">
+                <div class="flex flex-wrap justify-between items-center gap-3">
+                    <div class="text-xs text-zinc-400">
+                        Create an ordered waypoint patrol loop. Robot will cycle through points 1 &rarr; N &rarr; 1 when <span class="text-zinc-200 font-mono">"patrol"</span> is triggered.
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="addCurrentPoseAsWaypoint()" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                            <i class="fa-solid fa-map-pin"></i>
+                            <span>Add Current Pose as Waypoint</span>
+                        </button>
+                        <button onclick="addNewWaypointRow()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 border border-zinc-700">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Empty Waypoint</span>
+                        </button>
+                        <button onclick="savePatrolToServer()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-md">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Save Patrol Path</span>
+                        </button>
+                        <button onclick="sendCommand('patrol')" class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-md">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Start Patrol Now</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Patrol Waypoints Table -->
+                <div class="overflow-x-auto border border-zinc-800 rounded-lg bg-zinc-950">
+                    <table class="w-full text-left text-xs text-zinc-300">
+                        <thead class="bg-zinc-900/80 text-[11px] text-zinc-400 uppercase font-mono border-b border-zinc-800">
+                            <tr>
+                                <th class="p-3 w-16">Step</th>
+                                <th class="p-3">X Coordinate (m)</th>
+                                <th class="p-3">Y Coordinate (m)</th>
+                                <th class="p-3">Yaw Angle (rad)</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patrol-table-body" class="divide-y divide-zinc-800/60 font-mono">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -511,6 +665,11 @@ HTML_TEMPLATE = """
             document.getElementById("metrics-time").innerText = Math.round(data.active_duration) + " s";
 
             // 4. Update Pose
+            if (data.pose) {
+                livePose.x = parseFloat(data.pose.x) || 0.0;
+                livePose.y = parseFloat(data.pose.y) || 0.0;
+                livePose.theta = parseFloat(data.pose.theta) || 0.0;
+            }
             document.getElementById("pose-x").innerText = parseFloat(data.pose.x).toFixed(2) + " m";
             document.getElementById("pose-y").innerText = parseFloat(data.pose.y).toFixed(2) + " m";
 
@@ -795,6 +954,231 @@ HTML_TEMPLATE = """
         window.addEventListener('blur', () => {
             stopDriving();
         });
+
+        // ==========================================
+        // SEMANTIC LOCATIONS & PATROL MANAGER LOGIC
+        // ==========================================
+        let livePose = { x: 0.0, y: 0.0, theta: 0.0 };
+        let semanticLocations = {};
+        let patrolWaypoints = [];
+
+        function switchManagerTab(tab) {
+            const btnLoc = document.getElementById("tab-btn-locations");
+            const btnPat = document.getElementById("tab-btn-patrol");
+            const paneLoc = document.getElementById("tab-pane-locations");
+            const panePat = document.getElementById("tab-pane-patrol");
+
+            if (tab === 'locations') {
+                btnLoc.className = "px-3 py-1.5 rounded-md font-semibold text-white bg-indigo-600 transition flex items-center space-x-1.5";
+                btnPat.className = "px-3 py-1.5 rounded-md font-semibold text-zinc-400 hover:text-zinc-200 transition flex items-center space-x-1.5";
+                paneLoc.classList.remove("hidden");
+                panePat.classList.add("hidden");
+            } else {
+                btnPat.className = "px-3 py-1.5 rounded-md font-semibold text-white bg-indigo-600 transition flex items-center space-x-1.5";
+                btnLoc.className = "px-3 py-1.5 rounded-md font-semibold text-zinc-400 hover:text-zinc-200 transition flex items-center space-x-1.5";
+                panePat.classList.remove("hidden");
+                paneLoc.classList.add("hidden");
+            }
+        }
+
+        function fetchLocationsDatabase() {
+            fetch("/api/locations")
+                .then(res => res.json())
+                .then(data => {
+                    semanticLocations = data.locations || {};
+                    patrolWaypoints = data.patrol_waypoints || [];
+                    renderLocationsTable();
+                    renderPatrolTable();
+                    updateDeliveryDropdown();
+                })
+                .catch(err => console.error("Failed to load locations:", err));
+        }
+
+        function updateDeliveryDropdown() {
+            const select = document.getElementById("select-dest");
+            if (!select) return;
+            const currentVal = select.value;
+            const roomNames = Object.keys(semanticLocations).filter(k => !['start', 'charging_station'].includes(k));
+            if (roomNames.length > 0) {
+                select.innerHTML = roomNames.map(r => `<option value="${r}">${r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join("");
+                if (roomNames.includes(currentVal)) {
+                    select.value = currentVal;
+                }
+            }
+        }
+
+        function renderLocationsTable() {
+            const tbody = document.getElementById("locations-table-body");
+            if (!tbody) return;
+            const keys = Object.keys(semanticLocations);
+            if (keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-zinc-500 italic">No semantic locations defined yet. Click "Save Current Pose as Room" or "Add Custom Room".</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = keys.map(name => {
+                const loc = semanticLocations[name];
+                return `
+                    <tr class="hover:bg-zinc-900/50 transition">
+                        <td class="p-3 font-semibold text-zinc-200">${name}</td>
+                        <td class="p-3 text-indigo-300">${parseFloat(loc.x).toFixed(2)}</td>
+                        <td class="p-3 text-indigo-300">${parseFloat(loc.y).toFixed(2)}</td>
+                        <td class="p-3 text-zinc-400">${parseFloat(loc.yaw || 0.0).toFixed(2)}</td>
+                        <td class="p-3 text-right space-x-1.5">
+                            <button onclick="sendCommand('go to ${name}')" title="Navigate Robot to ${name}" class="px-2.5 py-1 rounded bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-xs font-sans transition">
+                                <i class="fa-solid fa-location-arrow mr-1"></i>Go
+                            </button>
+                            <button onclick="updateRoomWithCurrentPose('${name}')" title="Overwrite ${name} with Current Pose" class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-sans transition">
+                                <i class="fa-solid fa-crosshairs mr-1"></i>Capture Pose
+                            </button>
+                            <button onclick="deleteRoom('${name}')" title="Delete ${name}" class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/40 text-xs font-sans transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function renderPatrolTable() {
+            const tbody = document.getElementById("patrol-table-body");
+            if (!tbody) return;
+            if (patrolWaypoints.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-zinc-500 italic">No patrol waypoints. Click "Add Current Pose as Waypoint" to build a path.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = patrolWaypoints.map((wp, idx) => `
+                <tr class="hover:bg-zinc-900/50 transition">
+                    <td class="p-3 text-zinc-500 font-bold">#${idx + 1}</td>
+                    <td class="p-3 text-emerald-400">${parseFloat(wp.x).toFixed(2)}</td>
+                    <td class="p-3 text-emerald-400">${parseFloat(wp.y).toFixed(2)}</td>
+                    <td class="p-3 text-zinc-400">${parseFloat(wp.yaw || 0.0).toFixed(2)}</td>
+                    <td class="p-3 text-right space-x-1.5">
+                        <button onclick="moveWaypoint(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 px-2 py-1"' : 'class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded border border-zinc-700 text-xs transition"'} title="Move Up">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                        <button onclick="moveWaypoint(${idx}, 1)" ${idx === patrolWaypoints.length - 1 ? 'disabled class="opacity-30 px-2 py-1"' : 'class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded border border-zinc-700 text-xs transition"'} title="Move Down">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </button>
+                        <button onclick="deleteWaypoint(${idx})" title="Delete Waypoint" class="px-2 py-1 bg-red-950/40 hover:bg-red-600 text-red-400 hover:text-white rounded border border-red-800/40 text-xs transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        function addCurrentPoseAsRoom() {
+            const name = prompt("Enter Room / Location Name (e.g., 'balcony', 'study_room'):");
+            if (!name || !name.trim()) return;
+            const key = name.trim().toLowerCase();
+            semanticLocations[key] = {
+                x: parseFloat(livePose.x.toFixed(2)),
+                y: parseFloat(livePose.y.toFixed(2)),
+                yaw: parseFloat((livePose.theta || 0.0).toFixed(2))
+            };
+            renderLocationsTable();
+            updateDeliveryDropdown();
+            saveLocationsToServer();
+        }
+
+        function updateRoomWithCurrentPose(name) {
+            if (confirm(`Overwrite coordinates of '${name}' with current robot pose (x: ${livePose.x.toFixed(2)}, y: ${livePose.y.toFixed(2)})?`)) {
+                semanticLocations[name] = {
+                    x: parseFloat(livePose.x.toFixed(2)),
+                    y: parseFloat(livePose.y.toFixed(2)),
+                    yaw: parseFloat((livePose.theta || 0.0).toFixed(2))
+                };
+                renderLocationsTable();
+                saveLocationsToServer();
+            }
+        }
+
+        function addNewRoomRow() {
+            const name = prompt("Enter Room Name:");
+            if (!name || !name.trim()) return;
+            const x = prompt("Enter X coordinate (meters):", "0.0");
+            const y = prompt("Enter Y coordinate (meters):", "0.0");
+            const yaw = prompt("Enter Yaw orientation (radians):", "0.0");
+            const key = name.trim().toLowerCase();
+            semanticLocations[key] = {
+                x: parseFloat(x) || 0.0,
+                y: parseFloat(y) || 0.0,
+                yaw: parseFloat(yaw) || 0.0
+            };
+            renderLocationsTable();
+            updateDeliveryDropdown();
+            saveLocationsToServer();
+        }
+
+        function deleteRoom(name) {
+            if (confirm(`Are you sure you want to delete '${name}'?`)) {
+                delete semanticLocations[name];
+                renderLocationsTable();
+                updateDeliveryDropdown();
+                saveLocationsToServer();
+            }
+        }
+
+        function addCurrentPoseAsWaypoint() {
+            patrolWaypoints.push({
+                x: parseFloat(livePose.x.toFixed(2)),
+                y: parseFloat(livePose.y.toFixed(2)),
+                yaw: parseFloat((livePose.theta || 0.0).toFixed(2))
+            });
+            renderPatrolTable();
+            savePatrolToServer();
+        }
+
+        function addNewWaypointRow() {
+            const x = prompt("Enter X coordinate (meters):", "0.0");
+            const y = prompt("Enter Y coordinate (meters):", "0.0");
+            const yaw = prompt("Enter Yaw orientation (radians):", "0.0");
+            patrolWaypoints.push({
+                x: parseFloat(x) || 0.0,
+                y: parseFloat(y) || 0.0,
+                yaw: parseFloat(yaw) || 0.0
+            });
+            renderPatrolTable();
+            savePatrolToServer();
+        }
+
+        function moveWaypoint(idx, delta) {
+            const targetIdx = idx + delta;
+            if (targetIdx < 0 || targetIdx >= patrolWaypoints.length) return;
+            const item = patrolWaypoints.splice(idx, 1)[0];
+            patrolWaypoints.splice(targetIdx, 0, item);
+            renderPatrolTable();
+            savePatrolToServer();
+        }
+
+        function deleteWaypoint(idx) {
+            patrolWaypoints.splice(idx, 1);
+            renderPatrolTable();
+            savePatrolToServer();
+        }
+
+        function saveLocationsToServer() {
+            fetch("/api/locations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    locations: semanticLocations,
+                    patrol_waypoints: patrolWaypoints
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Locations database updated successfully.");
+            })
+            .catch(err => console.error("Error saving locations:", err));
+        }
+
+        function savePatrolToServer() {
+            saveLocationsToServer();
+        }
+
+        // Initialize locations database on page load
+        fetchLocationsDatabase();
     </script>
 </body>
 </html>
@@ -891,9 +1275,14 @@ class DashboardNode(Node):
         self.emergency_active = msg.data
 
     def odom_callback(self, msg: Odometry):
-        # Update current pose
+        # Update current pose (x, y, theta)
         self.current_pose['x'] = msg.pose.pose.position.x
         self.current_pose['y'] = msg.pose.pose.position.y
+        q = msg.pose.pose.orientation
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        self.current_pose['theta'] = math.atan2(siny_cosp, cosy_cosp)
+        
         self.current_speed['linear'] = msg.twist.twist.linear.x
         self.current_speed['angular'] = msg.twist.twist.angular.z
         
@@ -1016,6 +1405,34 @@ def manual_teleop():
         node.publish_twist(linear, angular)
         return jsonify({'status': 'success', 'linear': linear, 'angular': angular})
     return jsonify({'status': 'error', 'message': 'ROS Node not ready'}), 400
+
+@app.route('/api/locations', methods=['GET'])
+def get_locations():
+    config = load_semantic_config()
+    return jsonify({
+        'locations': config.get('locations', {}),
+        'patrol_waypoints': config.get('patrol_waypoints', [])
+    })
+
+@app.route('/api/locations', methods=['POST'])
+def update_locations():
+    data = request.json or {}
+    locations = data.get('locations', {})
+    patrol_waypoints = data.get('patrol_waypoints', [])
+    
+    config = {
+        'locations': locations,
+        'patrol_waypoints': patrol_waypoints
+    }
+    
+    saved = save_semantic_config(config)
+    if saved and node:
+        # Send reload command to voice interpreter
+        node.publish_command("reload locations")
+        return jsonify({'status': 'success', 'message': 'Locations and patrol path saved & reloaded'})
+    elif saved:
+        return jsonify({'status': 'success', 'message': 'Locations and patrol path saved'})
+    return jsonify({'status': 'error', 'message': 'Failed to save configuration'}), 500
 
 @app.route('/api/command', methods=['POST'])
 def send_command():

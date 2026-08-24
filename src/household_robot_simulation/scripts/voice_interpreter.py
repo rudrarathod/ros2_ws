@@ -31,35 +31,7 @@ class VoiceInterpreter(Node):
         # Load semantic locations and patrol waypoints from YAML configuration database
         self.locations = {}
         self.patrol_waypoints = []
-        try:
-            pkg_share = get_package_share_directory('household_robot_simulation')
-            yaml_path = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
-            with open(yaml_path, 'r') as f:
-                config = yaml.safe_load(f)
-                
-            # Parse target locations
-            for name, coords in config.get('locations', {}).items():
-                self.locations[name] = (coords['x'], coords['y'], coords['yaw'])
-                
-            # Parse patrol waypoints
-            for wp in config.get('patrol_waypoints', []):
-                self.patrol_waypoints.append((wp['x'], wp['y'], wp['yaw']))
-                
-            self.get_logger().info(f"Successfully loaded {len(self.locations)} semantic locations and {len(self.patrol_waypoints)} patrol waypoints from database.")
-        except Exception as e:
-            self.get_logger().error(f"Failed to load semantic locations database: {e}")
-            # Fallback to hardcoded defaults in case database loading fails
-            self.locations = {
-                'kitchen': (3.5, -1.0, 0.0),
-                'bedroom': (0.0, 3.5, 1.57),
-                'living room': (0.0, 0.0, 0.0),
-                'start': (0.0, 0.0, 0.0)
-            }
-            self.patrol_waypoints = [
-                (0.0, 0.0, 0.0),
-                (0.0, 3.5, 1.57),
-                (3.5, -1.0, 0.0)
-            ]
+        self.load_semantic_database()
 
         self.current_patrol_index = 0
         self.patrol_mode = False
@@ -382,7 +354,12 @@ class VoiceInterpreter(Node):
             else:
                 self.get_logger().info("No active alarms to clear.")
 
-        # 5. Delivery Commands
+        # 5. Reload Locations Database Command
+        elif any(kw in command for kw in ["reload locations", "reload config", "update locations"]):
+            self.load_semantic_database()
+            self.get_logger().info("Action: Reloaded semantic locations and patrol waypoints from database.")
+
+        # 6. Delivery Commands
         elif any(kw in command for kw in ["deliver", "bring", "get", "fetch"]):
             self.patrol_mode = False
             self.set_follower_mode(False)
@@ -562,6 +539,55 @@ class VoiceInterpreter(Node):
             self.get_logger().info("Canceling active Nav2 navigation goal.")
             self.current_goal_handle.cancel_goal_async()
             self.current_goal_handle = None
+
+    def load_semantic_database(self):
+        try:
+            yaml_path = None
+            try:
+                pkg_share = get_package_share_directory('household_robot_simulation')
+                p = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
+                if os.path.exists(p):
+                    yaml_path = p
+            except Exception:
+                pass
+            if not yaml_path:
+                src_path = '/home/rudrarathod/ros2_ws/src/household_robot_simulation/config/semantic_locations.yaml'
+                if os.path.exists(src_path):
+                    yaml_path = src_path
+
+            if yaml_path and os.path.exists(yaml_path):
+                with open(yaml_path, 'r') as f:
+                    config = yaml.safe_load(f) or {}
+
+                # Parse target locations
+                new_locations = {}
+                for name, coords in config.get('locations', {}).items():
+                    new_locations[str(name).lower()] = (float(coords['x']), float(coords['y']), float(coords.get('yaw', 0.0)))
+                self.locations = new_locations
+
+                # Parse patrol waypoints
+                new_waypoints = []
+                for wp in config.get('patrol_waypoints', []):
+                    new_waypoints.append((float(wp['x']), float(wp['y']), float(wp.get('yaw', 0.0))))
+                self.patrol_waypoints = new_waypoints
+
+                self.get_logger().info(f"Successfully loaded {len(self.locations)} semantic locations and {len(self.patrol_waypoints)} patrol waypoints from: {yaml_path}")
+            else:
+                raise FileNotFoundError(f"Config file not found in share or src paths")
+        except Exception as e:
+            self.get_logger().error(f"Failed to load semantic locations database: {e}")
+            if not self.locations:
+                self.locations = {
+                    'kitchen': (3.5, -1.0, 0.0),
+                    'bedroom': (0.0, 3.5, 1.57),
+                    'living room': (0.0, 0.0, 0.0),
+                    'start': (0.0, 0.0, 0.0)
+                }
+                self.patrol_waypoints = [
+                    (0.0, 0.0, 0.0),
+                    (0.0, 3.5, 1.57),
+                    (3.5, -1.0, 0.0)
+                ]
 
 
 def main(args=None):
