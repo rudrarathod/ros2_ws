@@ -478,13 +478,15 @@ class VoiceInterpreter(Node):
 
     def get_result_callback(self, future, goal_handle):
         try:
-            if goal_handle != self.current_goal_handle:
+            if future is None or future.cancelled():
                 return
-
             result = future.result()
+            if result is None:
+                return
             status = result.status
             self.get_logger().info(f"Nav2 navigation finished with status: {status}")
-            self.current_goal_handle = None
+            if self.current_goal_handle == goal_handle:
+                self.current_goal_handle = None
 
             if status == GoalStatus.STATUS_SUCCEEDED:
                 if self.docking_active:
@@ -536,8 +538,11 @@ class VoiceInterpreter(Node):
 
     def cancel_nav2_goal(self):
         if self.current_goal_handle is not None:
-            self.get_logger().info("Canceling active Nav2 navigation goal.")
-            self.current_goal_handle.cancel_goal_async()
+            try:
+                self.get_logger().info("Canceling active Nav2 navigation goal.")
+                self.current_goal_handle.cancel_goal_async()
+            except Exception:
+                pass
             self.current_goal_handle = None
 
     def load_semantic_database(self):

@@ -107,6 +107,10 @@ class PersonFollower(Node):
             if param.name == 'follow_mode':
                 self.follow_mode = param.value
                 self.state = "SEARCHING" if self.follow_mode else "DISABLED"
+                if not self.follow_mode:
+                    self.cancel_nav2_goal()
+                    cmd_msg = Twist()
+                    self.cmd_pub.publish(cmd_msg)
                 self.get_logger().info(f"Follow mode changed to: {self.follow_mode}")
             elif param.name == 'target_area_fraction':
                 self.target_area_fraction = param.value
@@ -410,27 +414,30 @@ class PersonFollower(Node):
 
     def get_result_callback(self, future, goal_handle):
         try:
-            # Only process status updates for the active goal handle
-            if goal_handle != self.current_goal_handle:
+            if future is None or future.cancelled():
                 return
-
             result = future.result()
+            if result is None:
+                return
             status = result.status
             self.get_logger().info(f"Nav2 action goal finished with status: {status}")
-            self.current_goal_handle = None
+            if self.current_goal_handle == goal_handle:
+                self.current_goal_handle = None
             
-            # If the goal finished (succeeded, aborted, or canceled) and we are currently
-            # searching, trigger the search rotation flag immediately.
+            # If the goal finished and we are currently searching, trigger search rotation flag
             if status in [GoalStatus.STATUS_SUCCEEDED, GoalStatus.STATUS_ABORTED, GoalStatus.STATUS_CANCELED]:
                 if self.state == "SEARCHING":
                     self.nav2_goal_reached = True
-        except Exception as e:
-            self.get_logger().error(f"Get result callback failed: {e}")
+        except Exception:
+            pass
 
     def cancel_nav2_goal(self):
         if self.current_goal_handle is not None:
-            self.get_logger().info("Canceling active Nav2 goal to rotate and search")
-            self.current_goal_handle.cancel_goal_async()
+            try:
+                self.get_logger().info("Canceling active Nav2 goal")
+                self.current_goal_handle.cancel_goal_async()
+            except Exception:
+                pass
             self.current_goal_handle = None
 
     def control_loop(self):
