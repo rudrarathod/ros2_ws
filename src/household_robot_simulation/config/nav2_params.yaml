@@ -103,16 +103,16 @@ controller_server:
       max_angular_accel: 3.2                         # Increased max angular acceleration (rad/s^2)
       simulate_ahead_time: 1.0
 
-      # Primary Controller (MPPI) Parameters
-      time_steps: 30
+      # Primary Controller (MPPI) Parameters: Evaluates multiple sampled trajectories against costmap
+      time_steps: 35
       model_dt: 0.05
-      batch_size: 400
+      batch_size: 800                                # Evaluates 800 candidate trajectories in parallel
       vx_std: 0.2
       vy_std: 0.0
-      wz_std: 0.6                                    # Increased angular sampling std dev
+      wz_std: 0.6                                    # Angular sampling std dev for agile turning
       vx_max: 0.5
       vx_min: -0.2
-      wz_max_speed: 1.6                              # Increased max angular speed (rad/s)
+      wz_max_speed: 1.6                              # Max angular speed (rad/s)
       iteration_count: 1
       prune_distance: 1.5
       transform_tolerance: 0.2
@@ -123,22 +123,22 @@ controller_server:
         cost_weight: 4.0
       ObstaclesCritic:
         cost_power: 1
-        cost_weight: 15.0
+        cost_weight: 8.0                             # Balanced cost weight allowing tight passage traversal
         consider_footprint: false
-        collision_cost: 1000.0
-        near_goal_distance: 0.6
+        collision_cost: 2000.0
+        near_goal_distance: 0.5
       GoalCritic:
         cost_power: 1
         cost_weight: 10.0
         threshold_to_consider: 0.5
       PathAlignCritic:
         cost_power: 1
-        cost_weight: 10.0
+        cost_weight: 14.0                            # Strongly aligns candidate paths with centerline of doorways
         trajectory_point_step: 3
         threshold_to_consider: 0.5
       PathFollowCritic:
         cost_power: 1
-        cost_weight: 15.0
+        cost_weight: 12.0
         offset_from_path: 0.2
         trajectory_point_step: 3
         threshold_to_consider: 0.5
@@ -160,12 +160,12 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.20
+      robot_radius: 0.18
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: scan stuck_obstacles
+        observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -174,16 +174,10 @@ local_costmap:
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           obstacle_max_range: 2.5
-        stuck_obstacles:
-          topic: /stuck_obstacles
-          max_obstacle_height: 2.0
-          clearing: true
-          marking: true
-          data_type: "PointCloud2"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 7.0                     # Steep exponential dropoff leaves center of doorways clear
+        inflation_radius: 0.30
 
 global_costmap:
   global_costmap:
@@ -195,7 +189,7 @@ global_costmap:
       update_frequency: 1.0
       publish_frequency: 1.0
       rolling_window: false
-      robot_radius: 0.20
+      robot_radius: 0.18
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -203,7 +197,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
-        observation_sources: scan stuck_obstacles
+        observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -212,16 +206,10 @@ global_costmap:
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           obstacle_max_range: 2.5
-        stuck_obstacles:
-          topic: /stuck_obstacles
-          max_obstacle_height: 2.0
-          clearing: true
-          marking: true
-          data_type: "PointCloud2"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 7.0                     # Steep exponential dropoff leaves center of doorways clear
+        inflation_radius: 0.30
 
 map_server:
   ros__parameters:
