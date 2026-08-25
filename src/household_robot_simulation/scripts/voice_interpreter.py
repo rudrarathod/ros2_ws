@@ -5,8 +5,7 @@ Subscribes to /voice/command.
 Translates commands to robot actions:
 - "follow me" / "come here" -> Enable follow_mode on person_follower.
 - "stop" / "halt" -> Disable follow_mode on person_follower and brake.
-- "go to kitchen" / "go to bedroom" / "go to living room" -> Go to target coordinate.
-- "patrol" -> Start waypoint patrol loop.
+- "save location <name>" / "delete location <name>" / "list locations" -> Manage semantic rooms.
 """
 import rclpy
 from rclpy.node import Node
@@ -34,9 +33,8 @@ class VoiceInterpreter(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        # Load semantic locations and patrol waypoints from YAML configuration database
+        # Load semantic locations from YAML configuration database
         self.locations = {}
-        self.patrol_waypoints = []
         try:
             pkg_share = get_package_share_directory('household_robot_simulation')
             yaml_path = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
@@ -48,11 +46,7 @@ class VoiceInterpreter(Node):
             for name, coords in config.get('locations', {}).items():
                 self.locations[name] = (coords['x'], coords['y'], coords['yaw'])
                 
-            # Parse patrol waypoints
-            for wp in config.get('patrol_waypoints', []):
-                self.patrol_waypoints.append((wp['x'], wp['y'], wp['yaw']))
-                
-            self.get_logger().info(f"Successfully loaded {len(self.locations)} semantic locations and {len(self.patrol_waypoints)} patrol waypoints from database.")
+            self.get_logger().info(f"Successfully loaded {len(self.locations)} semantic locations from database.")
         except Exception as e:
             self.get_logger().error(f"Failed to load semantic locations database: {e}")
             # Fallback to hardcoded defaults in case database loading fails
@@ -62,14 +56,6 @@ class VoiceInterpreter(Node):
                 'living room': (0.0, 0.0, 0.0),
                 'start': (0.0, 0.0, 0.0)
             }
-            self.patrol_waypoints = [
-                (0.0, 0.0, 0.0),
-                (0.0, 3.5, 1.57),
-                (3.5, -1.0, 0.0)
-            ]
-
-        self.current_patrol_index = 0
-        self.patrol_mode = False
 
         # Delivery task states
         self.delivery_item = None
@@ -142,18 +128,10 @@ class VoiceInterpreter(Node):
             return
 
         # Check for emergency conditions:
-        # 1. Intruder: 'person' seen while in patrol mode
-        # 2. Hazard: 'knife' or 'scissors' seen
+        # Hazard: 'knife' or 'scissors' seen
         for d in detections:
             cls = d['class'].lower()
-            
-            # Condition 1: Intruder
-            if cls == "person" and self.patrol_mode:
-                self.trigger_emergency_alarm("Intruder Detected in Patrol Mode!")
-                break
-                
-            # Condition 2: Hazard
-            elif cls in ["knife", "scissors"]:
+            if cls in ["knife", "scissors"]:
                 self.trigger_emergency_alarm(f"Hazardous Item Detected: {cls}!")
                 break
 
@@ -167,7 +145,6 @@ class VoiceInterpreter(Node):
         self.get_logger().error(f"!!! EMERGENCY ALERT !!! {reason} - Sounding alarms and halting robot.")
         
         # Stop the robot immediately
-        self.patrol_mode = False
         self.delivery_stage = None
         self.set_follower_mode(False)
         self.cancel_nav2_goal()
@@ -284,7 +261,6 @@ class VoiceInterpreter(Node):
 
     def trigger_autonomous_docking(self):
         self.get_logger().warn(f"Battery Critical ({self.battery_level:.1f}%)! Aborting tasks and returning to charging station.")
-        self.patrol_mode = False
         self.delivery_stage = None
         self.set_follower_mode(False)
         self.cancel_nav2_goal()
@@ -330,18 +306,16 @@ class VoiceInterpreter(Node):
             return None
 
     def persist_database(self):
-        """Save in-memory locations and patrol waypoints back to YAML."""
-        data = {
-            'locations': {
+        """Save in-memory locations back to YAML, preserving existing other keys like patrol_waypoints."""
+        try:
+            data = {}
+            if os.path.exists(self.yaml_path):
+                with open(self.yaml_path, 'r') as f:
+                    data = yaml.safe_load(f) or {}
+            data['locations'] = {
                 name: {'x': float(c[0]), 'y': float(c[1]), 'yaw': float(c[2])}
                 for name, c in self.locations.items()
-            },
-            'patrol_waypoints': [
-                {'x': float(wp[0]), 'y': float(wp[1]), 'yaw': float(wp[2])}
-                for wp in self.patrol_waypoints
-            ]
-        }
-        try:
+            }
             with open(self.yaml_path, 'w') as f:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
             self.get_logger().info(f"Database successfully updated on disk ({self.yaml_path}).")
@@ -386,37 +360,11 @@ class VoiceInterpreter(Node):
         else:
             self.get_logger().warn(f"Delete Location Failed: Location '{name}' not found in database.")
 
-    def handle_add_patrol_waypoint(self):
-        pose = self.get_current_pose()
-        if pose is None:
-            self.get_logger().error("Add Patrol Waypoint Failed: Could not get robot pose from TF.")
-            return
-
-        x, y, yaw = pose
-        self.patrol_waypoints.append((x, y, yaw))
-        self.persist_database()
-        deg = round(math.degrees(yaw), 1)
-        idx = len(self.patrol_waypoints)
-        self.get_logger().info(f"Action: Added Patrol Waypoint #{idx} at x={x}, y={y}, yaw={yaw} rad ({deg}°)")
-
-    def handle_delete_patrol_waypoint(self, raw_index: str):
-        nums = re.findall(r'\d+', raw_index)
-        if nums:
-            idx = int(nums[0])
-            if 1 <= idx <= len(self.patrol_waypoints):
-                removed = self.patrol_waypoints.pop(idx - 1)
-                self.persist_database()
-                self.get_logger().info(f"Action: Removed Patrol Waypoint #{idx} (x={removed[0]}, y={removed[1]}).")
-                return
-        self.get_logger().warn(f"Delete Waypoint Failed: Invalid waypoint index. Current count: {len(self.patrol_waypoints)}")
-
     def handle_list_locations(self):
         self.get_logger().info(f"--- Mapped Locations ({len(self.locations)}) ---")
         for name, coords in self.locations.items():
-            self.get_logger().info(f"  • {name}: x={coords[0]:.2f}, y={coords[1]:.2f}, yaw={coords[2]:.2f}")
-        self.get_logger().info(f"--- Patrol Waypoints ({len(self.patrol_waypoints)}) ---")
-        for i, wp in enumerate(self.patrol_waypoints, start=1):
-            self.get_logger().info(f"  [{i}] x={wp[0]:.2f}, y={wp[1]:.2f}, yaw={wp[2]:.2f}")
+            deg = round(math.degrees(coords[2]), 1)
+            self.get_logger().info(f"  • {name:20s}: x={coords[0]:6.2f}, y={coords[1]:6.2f}, yaw={coords[2]:5.2f} rad ({deg:5.1f}°)")
 
     def voice_callback(self, msg: String):
         command = msg.data.lower().strip()
@@ -437,15 +385,7 @@ class VoiceInterpreter(Node):
                     self.handle_delete_location(room_name)
                     return
 
-        elif any(kw in command for kw in ["add patrol waypoint", "save patrol waypoint", "save waypoint", "add waypoint", "save patrol point"]):
-            self.handle_add_patrol_waypoint()
-            return
-
-        elif any(command.startswith(prefix) for prefix in ["delete patrol waypoint", "remove patrol waypoint", "delete waypoint", "remove waypoint"]):
-            self.handle_delete_patrol_waypoint(command)
-            return
-
-        elif any(kw in command for kw in ["list locations", "show locations", "list rooms", "show rooms", "list waypoints"]):
+        elif any(kw in command for kw in ["list locations", "show locations", "list rooms", "show rooms"]):
             self.handle_list_locations()
             return
 
@@ -469,14 +409,12 @@ class VoiceInterpreter(Node):
 
         # 1. Follow Commands
         if any(kw in command for kw in ["follow me", "come here", "track me", "start following"]):
-            self.patrol_mode = False
             self.cancel_nav2_goal()
             self.set_follower_mode(True)
             self.get_logger().info("Action: Enabling Person Following Mode.")
 
         # 2. Stop Commands
         elif any(kw in command for kw in ["stop", "halt", "stay", "brake"]):
-            self.patrol_mode = False
             self.cancel_nav2_goal()
             self.set_follower_mode(False)
             # Send immediate active braking command
@@ -492,7 +430,6 @@ class VoiceInterpreter(Node):
         # 4. Manual Charging/Docking Commands
         elif any(kw in command for kw in ["go charge", "dock", "return to charger", "recharge"]):
             self.get_logger().info("Action: Manual command received. Returning to charging station.")
-            self.patrol_mode = False
             self.delivery_stage = None
             self.set_follower_mode(False)
             self.cancel_nav2_goal()
@@ -527,7 +464,6 @@ class VoiceInterpreter(Node):
 
         # 5. Delivery Commands
         elif any(kw in command for kw in ["deliver", "bring", "get", "fetch"]):
-            self.patrol_mode = False
             self.set_follower_mode(False)
             self.cancel_nav2_goal()
             
@@ -558,7 +494,6 @@ class VoiceInterpreter(Node):
 
         # 6. Restocking Commands
         elif any(kw in command for kw in ["restock", "refill"]):
-            self.patrol_mode = False
             self.set_follower_mode(False)
             self.cancel_nav2_goal()
             
@@ -572,31 +507,6 @@ class VoiceInterpreter(Node):
                 self.inventory['water bottle'] = 3
                 self.inventory['medicine'] = 2
                 self.get_logger().info("Action: All item storage counters successfully restocked.")
-
-        # 7. Navigation Commands
-        elif any(room in command for room in self.locations.keys()):
-            self.patrol_mode = False
-            self.set_follower_mode(False)
-            
-            # Find which room was mentioned
-            target_room = None
-            for room in self.locations.keys():
-                if room in command:
-                    target_room = room
-                    break
- 
-            if target_room:
-                x, y, yaw = self.locations[target_room]
-                self.get_logger().info(f"Action: Navigating to room: '{target_room}' (x={x}, y={y})")
-                self.send_nav2_goal(x, y, yaw)
-
-        # 8. Patrol Commands
-        elif any(kw in command for kw in ["patrol", "start patrol", "watch the house"]):
-            self.set_follower_mode(False)
-            self.patrol_mode = True
-            self.current_patrol_index = 0
-            self.get_logger().info("Action: Initiating Home Patrol Loop.")
-            self.send_next_patrol_waypoint()
 
         else:
             self.get_logger().warn(f"Unrecognized voice command phrase: '{command}'")
@@ -664,9 +574,6 @@ class VoiceInterpreter(Node):
                 elif self.delivery_stage == "GO_TO_DESTINATION":
                     self.get_logger().info(f"Arrived at destination '{self.delivery_destination}'. Successfully delivered {self.delivery_item}!")
                     self.delivery_stage = None
-                elif self.patrol_mode:
-                    self.current_patrol_index = (self.current_patrol_index + 1) % len(self.patrol_waypoints)
-                    self.send_next_patrol_waypoint()
             else:
                 if self.docking_active:
                     self.get_logger().error("Failed to navigate to Charging Station!")
@@ -692,13 +599,6 @@ class VoiceInterpreter(Node):
             x, y, yaw = self.locations[self.delivery_destination]
             self.get_logger().info(f"Item loaded. Navigating to destination: '{self.delivery_destination}'...")
             self.send_nav2_goal(x, y, yaw)
-
-    def send_next_patrol_waypoint(self):
-        if not self.patrol_mode:
-            return
-        x, y, yaw = self.patrol_waypoints[self.current_patrol_index]
-        self.get_logger().info(f"Patrol Waypoint [{self.current_patrol_index + 1}/{len(self.patrol_waypoints)}]: x={x:.2f}, y={y:.2f}")
-        self.send_nav2_goal(x, y, yaw)
 
     def cancel_nav2_goal(self):
         if self.current_goal_handle is not None:

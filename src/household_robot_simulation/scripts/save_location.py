@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Interactive CLI and command-line utility for managing semantic rooms and patrol waypoints.
+Interactive CLI and command-line utility for managing semantic rooms, locations, and saved patrol waypoints.
 Features:
 - Save current robot pose (from TF) as a named room or patrol waypoint.
-- List all saved locations and waypoints with coordinates and orientations.
-- Edit/update coordinates of existing rooms or waypoints.
-- Delete rooms or waypoints from the database.
-- Immediately updates config/semantic_locations.yaml for Nav2 and Voice Interpreter.
+- List all saved locations and patrol waypoints with coordinates and orientations.
+- Edit/update coordinates of existing rooms.
+- Delete rooms or patrol waypoints from the database.
+- Immediately updates config/semantic_locations.yaml.
 """
 
 import os
@@ -34,7 +34,6 @@ class WaypointManager(Node):
             install_yaml = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
             self.yaml_path = os.path.realpath(install_yaml)
         except Exception:
-            # Fallback path relative to workspace
             ws_root = os.path.expanduser('~/ros2_ws')
             self.yaml_path = os.path.join(ws_root, 'src', 'household_robot_simulation', 'config', 'semantic_locations.yaml')
 
@@ -72,7 +71,6 @@ class WaypointManager(Node):
 
     def get_current_pose(self, target_frame='map', base_frame='base_footprint', timeout=2.0):
         """Look up the robot's current pose using TF."""
-        # Process callbacks to let TF buffer fill
         start_time = self.get_clock().now().nanoseconds / 1e9
         while (self.get_clock().now().nanoseconds / 1e9 - start_time) < timeout:
             rclpy.spin_once(self, timeout_sec=0.1)
@@ -124,7 +122,7 @@ class WaypointManager(Node):
         return success
 
     def add_patrol_waypoint(self, x=None, y=None, yaw=None):
-        """Add a waypoint to the patrol queue."""
+        """Add a waypoint to the saved patrol waypoints list."""
         if x is None or y is None or yaw is None:
             pose = self.get_current_pose()
             if pose is None:
@@ -143,7 +141,7 @@ class WaypointManager(Node):
         if success:
             deg = round(math.degrees(yaw), 1)
             idx = len(data['patrol_waypoints'])
-            print(f"-> Patrol Waypoint #{idx} added: x={x}, y={y}, yaw={yaw} rad ({deg}°)")
+            print(f"-> Patrol Waypoint #{idx} saved: x={x}, y={y}, yaw={yaw} rad ({deg}°)")
         return success
 
     def delete_room(self, name):
@@ -189,14 +187,14 @@ class WaypointManager(Node):
                 print(f"  • {name:20s} : x={coords['x']:6.2f}, y={coords['y']:6.2f}, yaw={coords['yaw']:5.2f} rad ({deg:5.1f}°)")
 
         print("\n===========================================================")
-        print("               PATROL WAYPOINTS QUEUE                      ")
+        print("               SAVED PATROL WAYPOINTS                      ")
         print("===========================================================")
         if not patrol:
             print("  (No patrol waypoints saved yet)")
         else:
             for i, wp in enumerate(patrol, start=1):
                 deg = round(math.degrees(wp['yaw']), 1)
-                print(f"  [{i}] Stop #{i:02d}            : x={wp['x']:6.2f}, y={wp['y']:6.2f}, yaw={wp['yaw']:5.2f} rad ({deg:5.1f}°)")
+                print(f"  [{i}] Waypoint #{i:02d}        : x={wp['x']:6.2f}, y={wp['y']:6.2f}, yaw={wp['yaw']:5.2f} rad ({deg:5.1f}°)")
         print("===========================================================\n")
 
 
@@ -204,10 +202,10 @@ def interactive_menu(manager):
     """Run interactive text UI menu."""
     while True:
         print("\n===========================================================")
-        print("         ROBOT WAYPOINT & LOCATION MANAGER                ")
+        print("        ROBOT LOCATION & WAYPOINT MANAGER                  ")
         print("===========================================================")
         print("  1. Save Current Pose as Room / Location")
-        print("  2. Add Current Pose to Patrol Queue")
+        print("  2. Save Current Pose as Patrol Waypoint")
         print("  3. List All Rooms & Patrol Waypoints")
         print("  4. Edit Room Coordinates Manually")
         print("  5. Delete a Room / Location")
@@ -258,7 +256,7 @@ def interactive_menu(manager):
             except ValueError:
                 print("-> Invalid number.")
         elif choice == '7' or choice.lower() in ['q', 'exit', 'quit']:
-            print("Exiting Waypoint Manager.")
+            print("Exiting Manager.")
             break
         else:
             print("-> Invalid choice. Please enter a number 1 to 7.")
@@ -268,17 +266,17 @@ def main(args=None):
     rclpy.init(args=args)
     manager = WaypointManager()
 
-    parser = argparse.ArgumentParser(description="Household Robot Waypoint & Location Manager")
+    parser = argparse.ArgumentParser(description="Household Robot Location & Waypoint Manager")
     parser.add_argument('--room', type=str, help="Save current pose as specified room name")
-    parser.add_argument('--patrol', action='store_true', help="Add current pose to patrol queue")
+    parser.add_argument('--patrol', '--waypoint', action='store_true', dest='patrol', help="Save current pose as patrol waypoint")
     parser.add_argument('--list', action='store_true', help="List all saved rooms and waypoints")
     parser.add_argument('--delete-room', type=str, help="Delete a room by name")
-    parser.add_argument('--delete-patrol', type=int, help="Delete a patrol waypoint by 1-based index")
-    parser.add_argument('--x', type=float, help="Manual X coordinate (optional with --room)")
-    parser.add_argument('--y', type=float, help="Manual Y coordinate (optional with --room)")
-    parser.add_argument('--yaw', type=float, help="Manual Yaw in rad (optional with --room)")
+    parser.add_argument('--delete-patrol', '--delete-waypoint', type=int, dest='delete_patrol', help="Delete a patrol waypoint by 1-based index")
+    parser.add_argument('--x', type=float, help="Manual X coordinate (optional)")
+    parser.add_argument('--y', type=float, help="Manual Y coordinate (optional)")
+    parser.add_argument('--yaw', type=float, help="Manual Yaw in rad (optional)")
 
-    # If args passed from command line (excluding ROS args):
+    # Filter out ROS args
     filtered_args = [a for a in sys.argv[1:] if not a.startswith('--ros-args')]
     parsed = parser.parse_args(filtered_args)
 
@@ -293,7 +291,6 @@ def main(args=None):
     elif parsed.delete_patrol is not None:
         manager.delete_patrol_waypoint(parsed.delete_patrol)
     else:
-        # Default to interactive menu
         interactive_menu(manager)
 
     manager.destroy_node()
