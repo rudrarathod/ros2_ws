@@ -21,12 +21,18 @@ from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import Parameter, ParameterValue, ParameterType
 import math
 import os
+import re
 import yaml
+import tf2_ros
 from ament_index_python.packages import get_package_share_directory
 
 class VoiceInterpreter(Node):
     def __init__(self):
         super().__init__('voice_interpreter')
+
+        # TF2 Setup to query current robot position for saving locations
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # Load semantic locations and patrol waypoints from YAML configuration database
         self.locations = {}
@@ -34,7 +40,8 @@ class VoiceInterpreter(Node):
         try:
             pkg_share = get_package_share_directory('household_robot_simulation')
             yaml_path = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
-            with open(yaml_path, 'r') as f:
+            self.yaml_path = os.path.realpath(yaml_path)
+            with open(self.yaml_path, 'r') as f:
                 config = yaml.safe_load(f)
                 
             # Parse target locations
@@ -302,9 +309,145 @@ class VoiceInterpreter(Node):
         self.get_logger().info(f"Sending request to set follow_mode = {enable}")
         self.param_client.call_async(req)
 
+    def get_current_pose(self, target_frame='map', base_frame='base_footprint'):
+        """Get the robot's current pose using TF."""
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                target_frame,
+                base_frame,
+                rclpy.time.Time()
+            )
+            trans = transform.transform.translation
+            rot = transform.transform.rotation
+
+            siny_cosp = 2.0 * (rot.w * rot.z + rot.x * rot.y)
+            cosy_cosp = 1.0 - 2.0 * (rot.y * rot.y + rot.z * rot.z)
+            yaw = math.atan2(siny_cosp, cosy_cosp)
+            return round(trans.x, 3), round(trans.y, 3), round(yaw, 3)
+        except Exception:
+            if target_frame == 'map':
+                return self.get_current_pose(target_frame='odom', base_frame=base_frame)
+            return None
+
+    def persist_database(self):
+        """Save in-memory locations and patrol waypoints back to YAML."""
+        data = {
+            'locations': {
+                name: {'x': float(c[0]), 'y': float(c[1]), 'yaw': float(c[2])}
+                for name, c in self.locations.items()
+            },
+            'patrol_waypoints': [
+                {'x': float(wp[0]), 'y': float(wp[1]), 'yaw': float(wp[2])}
+                for wp in self.patrol_waypoints
+            ]
+        }
+        try:
+            with open(self.yaml_path, 'w') as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            self.get_logger().info(f"Database successfully updated on disk ({self.yaml_path}).")
+            return True
+        except Exception as e:
+            self.get_logger().error(f"Failed to write database: {e}")
+            return False
+
+    def handle_save_location(self, raw_name: str):
+        name = raw_name.strip()
+        for prefix in ['location as ', 'location ', 'room as ', 'room ', 'spot as ', 'spot ', 'here as ']:
+            if name.startswith(prefix):
+                name = name[len(prefix):].strip()
+                break
+        name = name.strip().lower()
+        if not name:
+            self.get_logger().warn("Save Location Failed: No room name provided.")
+            return
+
+        pose = self.get_current_pose()
+        if pose is None:
+            self.get_logger().error("Save Location Failed: Could not get robot pose from TF.")
+            return
+
+        x, y, yaw = pose
+        self.locations[name] = (x, y, yaw)
+        self.persist_database()
+        deg = round(math.degrees(yaw), 1)
+        self.get_logger().info(f"Action: Saved new location '{name}' at x={x}, y={y}, yaw={yaw} rad ({deg}°)")
+
+    def handle_delete_location(self, raw_name: str):
+        name = raw_name.strip()
+        for prefix in ['location ', 'room ', 'spot ']:
+            if name.startswith(prefix):
+                name = name[len(prefix):].strip()
+                break
+        name = name.strip().lower()
+        if name in self.locations:
+            del self.locations[name]
+            self.persist_database()
+            self.get_logger().info(f"Action: Successfully deleted location '{name}'.")
+        else:
+            self.get_logger().warn(f"Delete Location Failed: Location '{name}' not found in database.")
+
+    def handle_add_patrol_waypoint(self):
+        pose = self.get_current_pose()
+        if pose is None:
+            self.get_logger().error("Add Patrol Waypoint Failed: Could not get robot pose from TF.")
+            return
+
+        x, y, yaw = pose
+        self.patrol_waypoints.append((x, y, yaw))
+        self.persist_database()
+        deg = round(math.degrees(yaw), 1)
+        idx = len(self.patrol_waypoints)
+        self.get_logger().info(f"Action: Added Patrol Waypoint #{idx} at x={x}, y={y}, yaw={yaw} rad ({deg}°)")
+
+    def handle_delete_patrol_waypoint(self, raw_index: str):
+        nums = re.findall(r'\d+', raw_index)
+        if nums:
+            idx = int(nums[0])
+            if 1 <= idx <= len(self.patrol_waypoints):
+                removed = self.patrol_waypoints.pop(idx - 1)
+                self.persist_database()
+                self.get_logger().info(f"Action: Removed Patrol Waypoint #{idx} (x={removed[0]}, y={removed[1]}).")
+                return
+        self.get_logger().warn(f"Delete Waypoint Failed: Invalid waypoint index. Current count: {len(self.patrol_waypoints)}")
+
+    def handle_list_locations(self):
+        self.get_logger().info(f"--- Mapped Locations ({len(self.locations)}) ---")
+        for name, coords in self.locations.items():
+            self.get_logger().info(f"  • {name}: x={coords[0]:.2f}, y={coords[1]:.2f}, yaw={coords[2]:.2f}")
+        self.get_logger().info(f"--- Patrol Waypoints ({len(self.patrol_waypoints)}) ---")
+        for i, wp in enumerate(self.patrol_waypoints, start=1):
+            self.get_logger().info(f"  [{i}] x={wp[0]:.2f}, y={wp[1]:.2f}, yaw={wp[2]:.2f}")
+
     def voice_callback(self, msg: String):
         command = msg.data.lower().strip()
         self.get_logger().info(f"Received voice command: '{command}'")
+
+        # Location Management Commands
+        if any(command.startswith(prefix) for prefix in ["save location", "save room", "record room", "record location", "set location", "set room"]):
+            for prefix in ["save location", "save room", "record room", "record location", "set location", "set room"]:
+                if command.startswith(prefix):
+                    room_name = command[len(prefix):].strip()
+                    self.handle_save_location(room_name)
+                    return
+
+        elif any(command.startswith(prefix) for prefix in ["delete location", "delete room", "remove location", "remove room"]):
+            for prefix in ["delete location", "delete room", "remove location", "remove room"]:
+                if command.startswith(prefix):
+                    room_name = command[len(prefix):].strip()
+                    self.handle_delete_location(room_name)
+                    return
+
+        elif any(kw in command for kw in ["add patrol waypoint", "save patrol waypoint", "save waypoint", "add waypoint", "save patrol point"]):
+            self.handle_add_patrol_waypoint()
+            return
+
+        elif any(command.startswith(prefix) for prefix in ["delete patrol waypoint", "remove patrol waypoint", "delete waypoint", "remove waypoint"]):
+            self.handle_delete_patrol_waypoint(command)
+            return
+
+        elif any(kw in command for kw in ["list locations", "show locations", "list rooms", "show rooms", "list waypoints"]):
+            self.handle_list_locations()
+            return
 
         # Check if emergency alarm is active
         is_clear_cmd = any(kw in command for kw in ["clear", "reset", "cancel", "all clear"])

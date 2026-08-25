@@ -65,6 +65,7 @@ install(
     scripts/person_follower.py
     scripts/voice_interpreter.py
     scripts/voice_simulator_cli.py
+    scripts/save_location.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
