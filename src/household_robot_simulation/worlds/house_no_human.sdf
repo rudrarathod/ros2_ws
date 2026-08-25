@@ -1,0 +1,663 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="house_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Physics and Scene plugins -->
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin
+      filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu">
+    </plugin>
+
+    <!-- Standard Lights -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Sun</uri>
+    </include>
+
+    <!-- Ground Plane -->
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Ground Plane</uri>
+    </include>
+
+    <!-- House Walls Structure -->
+    <model name="house_walls">
+      <static>true</static>
+      <link name="walls_link">
+        
+        <!-- Outer Wall North -->
+        <visual name="wall_north_visual">
+          <pose>0 4 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.1 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.9 0.9 0.9 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="wall_north_collision">
+          <pose>0 4 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.1 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Outer Wall South -->
+        <visual name="wall_south_visual">
+          <pose>0 -4 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.1 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.9 0.9 0.9 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="wall_south_collision">
+          <pose>0 -4 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.1 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Outer Wall East -->
+        <visual name="wall_east_visual">
+          <pose>5 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 8 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.9 0.9 0.9 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="wall_east_collision">
+          <pose>5 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 8 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Outer Wall West -->
+        <visual name="wall_west_visual">
+          <pose>-5 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 8 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.9 0.9 0.9 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="wall_west_collision">
+          <pose>-5 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 8 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Inner Partition Wall: Bedroom East Partition -->
+        <!-- Center at x = -1.5, length 5.5m, thickness 0.1m, height 2.5m -->
+        <!-- Leaves 2.5m opening for the bedroom door/hallway -->
+        <visual name="inner_wall_bedroom_visual">
+          <pose>-1.5 -1.25 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 5.5 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="inner_wall_bedroom_collision">
+          <pose>-1.5 -1.25 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 5.5 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Inner Partition Wall: Bedroom North Corner Wall -->
+        <!-- Center at x = -1.5, y = 3.5, length 1m -->
+        <visual name="inner_wall_bedroom_north_visual">
+          <pose>-1.5 3.5 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 1 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="inner_wall_bedroom_north_collision">
+          <pose>-1.5 3.5 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 1 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Inner Partition Wall: Bathroom Partition -->
+        <!-- Wall at y = 1.5, from x = -5 to x = -2.5. Center at (-3.75, 1.5, 1.25), length 2.5m -->
+        <visual name="inner_wall_bathroom_h_visual">
+          <pose>-3.75 1.5 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.5 0.1 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="inner_wall_bathroom_h_collision">
+          <pose>-3.75 1.5 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.5 0.1 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Bathroom Vertical Door Frame Wall (left bathroom door opening) -->
+        <!-- Wall at x = -2.5, from y = 1.5 to 2.5. Center at (-2.5, 2.0, 1.25), length 1m -->
+        <visual name="inner_wall_bathroom_v1_visual">
+          <pose>-2.5 2.0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 1.0 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="inner_wall_bathroom_v1_collision">
+          <pose>-2.5 2.0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 1.0 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Bathroom Vertical Wall Upper Section -->
+        <!-- Wall at x = -2.5, from y = 3.5 to 4.0. Center at (-2.5, 3.75, 1.25), length 0.5m -->
+        <!-- Leaves 1m door opening at y = 2.5 to 3.5 -->
+        <visual name="inner_wall_bathroom_v2_visual">
+          <pose>-2.5 3.75 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 0.5 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="inner_wall_bathroom_v2_collision">
+          <pose>-2.5 3.75 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 0.5 2.5</size>
+            </box>
+          </geometry>
+        </collision>
+
+      </link>
+    </model>
+
+    <!-- ==================== Furniture Section ==================== -->
+
+    <!-- Bedroom (Bottom Left Room) -->
+    <!-- Bed at (-3.5, -2.5, 0) with a 90 degree rotation (yaw = 1.57) -->
+    <include>
+      <name>bedroom_bed</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bed</uri>
+      <pose>-3.2 -2.2 0 0 0 1.57</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Bookshelf in Bedroom Corner -->
+    <include>
+      <name>bedroom_bookshelf</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bookshelf</uri>
+      <pose>-4.5 0.8 0 0 0 0</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Living Room (Bottom Right Area) -->
+    <!-- Couch at (2.5, -2.5, 0) facing North -->
+    <include>
+      <name>living_couch</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/sofa</uri>
+      <pose>2.5 -2.5 0 0 0 0</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Bookshelf in Living Room Corner -->
+    <include>
+      <name>living_bookshelf</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Bookshelf</uri>
+      <pose>4.5 -2.5 0 0 0 1.57</pose>
+      <static>true</static>
+    </include>
+
+    <!-- ==================== Bathroom Section ==================== -->
+    <!-- Bathtub along the west wall -->
+    <include>
+      <name>bathroom_bathtub</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/bathtub</uri>
+      <pose>-4.5 2.75 0.01 0 0 1.57</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Washbasin/Sink along the south divider wall -->
+    <include>
+      <name>bathroom_sink</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/KitchenSink</uri>
+      <pose>-3.2 1.85 0.01 0 0 3.1416</pose>
+      <static>true</static>
+    </include>
+
+    <!-- ==================== Kitchen Section ==================== -->
+    <!-- Fridge in the corner, against the partition wall -->
+    <include>
+      <name>kitchen_fridge</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Fridge</uri>
+      <pose>-0.8 3.2 0 0 0 0</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Stove/Oven along the north wall -->
+    <include>
+      <name>kitchen_oven</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Oven</uri>
+      <pose>0.5 3.5 0 0 0 -1.57</pose>
+      <static>true</static>
+    </include>
+
+    <!-- Kitchen Countertop with Cabinets between Oven and Sink -->
+    <model name="kitchen_cabinets_countertop">
+      <static>true</static>
+      <pose>2.0 3.55 0 0 0 0</pose>
+      <link name="link">
+        <!-- Main Physical Collision Box for LIDAR & Navigation -->
+        <collision name="counter_collision">
+          <pose>0 0 0.44 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.2 0.65 0.88</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Recessed Plinth / Toe Kick -->
+        <visual name="toe_kick_visual">
+          <pose>0 0.05 0.05 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.18 0.55 0.10</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Carcass / Body -->
+        <visual name="cabinet_body_visual">
+          <pose>0 0 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.2 0.63 0.74</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.48 0.35 0.24 1</ambient>
+            <diffuse>0.62 0.46 0.32 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 1 (Leftmost) -->
+        <visual name="cabinet_door_1_visual">
+          <pose>-0.81 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 2 -->
+        <visual name="cabinet_door_2_visual">
+          <pose>-0.27 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 3 -->
+        <visual name="cabinet_door_3_visual">
+          <pose>0.27 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Cabinet Door 4 (Rightmost) -->
+        <visual name="cabinet_door_4_visual">
+          <pose>0.81 -0.32 0.47 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.51 0.02 0.70</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.54 0.40 0.28 1</ambient>
+            <diffuse>0.68 0.52 0.36 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <!-- Door Handles (Modern Brushed Metal) -->
+        <visual name="handle_1_visual">
+          <pose>-0.60 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_2_visual">
+          <pose>-0.48 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_3_visual">
+          <pose>0.48 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <visual name="handle_4_visual">
+          <pose>0.60 -0.34 0.72 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 0.02 0.015</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <!-- Polished Quartz/Marble Countertop (Kitchen Top) -->
+        <visual name="countertop_slab_visual">
+          <pose>0 -0.01 0.86 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.22 0.68 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.88 0.89 0.90 1</ambient>
+            <diffuse>0.92 0.93 0.94 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+
+        <!-- Backsplash Upstand along North Wall -->
+        <visual name="backsplash_visual">
+          <pose>0 0.32 0.91 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>2.22 0.02 0.06</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.88 0.89 0.90 1</ambient>
+            <diffuse>0.92 0.93 0.94 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Kitchen Sink along the north wall -->
+    <include>
+      <name>kitchen_sink</name>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/KitchenSink</uri>
+      <pose>3.5 3.5 0 0 0 -1.57</pose>
+      <static>true</static>
+    </include>
+
+    <!-- QR Code Poster on the Wall -->
+    <model name="qr_board">
+      <static>true</static>
+      <pose>-1.445 -0.4 0.5 0 0 0</pose> <!-- Hung on the East-facing partition wall -->
+      <link name="link">
+        <visual name="qr_texture_visual">
+          <geometry>
+            <box>
+              <size>0.001 0.5 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <diffuse>1 1 1 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://household_robot_simulation/materials/textures/qr.png</albedo_map>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Bedroom Ceiling Point Light -->
+    <light name="bedroom_light" type="point">
+      <pose>-3.5 -2.5 2.5 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation>
+        <range>8</range>
+        <constant>0.5</constant>
+        <linear>0.1</linear>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+      <cast_shadows>true</cast_shadows>
+    </light>
+
+    <!-- Bathroom Ceiling Point Light -->
+    <light name="bathroom_light" type="point">
+      <pose>-3.5 2.5 2.5 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation>
+        <range>8</range>
+        <constant>0.5</constant>
+        <linear>0.1</linear>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+      <cast_shadows>true</cast_shadows>
+    </light>
+
+    <!-- Physical Kitchen Counter for Water Bottle Storage -->
+    <model name="kitchen_counter">
+      <static>true</static>
+      <pose>4.8 2.5 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.4 1.2 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 1.2 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.3 0.1 1</ambient>
+            <diffuse>0.5 0.3 0.1 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Physical Medicine Cabinet for Medical Item Storage -->
+    <model name="medicine_cabinet">
+      <static>true</static>
+      <pose>1.0 -3.8 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.8 0.4 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.8 0.4 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.3 0.4 1</ambient>
+            <diffuse>0.2 0.3 0.4 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Physical Charging Tile on the Floor (Visual only, no collision) -->
+    <model name="charging_tile">
+      <static>true</static>
+      <pose>0.0 0.0 0.005 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.6 0.6 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 0.0 1</ambient> <!-- Green color -->
+            <diffuse>0.0 0.8 0.0 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

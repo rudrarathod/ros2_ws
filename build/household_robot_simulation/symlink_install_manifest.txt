@@ -1,6 +1,7 @@
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/navigation.launch.py
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/simulation.launch.py
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house.sdf
+/home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house_no_human.sdf
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/urdf/custom_robot.urdf
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/rviz/robot.rviz
 /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/bridge_config.yaml

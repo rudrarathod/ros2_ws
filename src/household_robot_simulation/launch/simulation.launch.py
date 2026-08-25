@@ -21,12 +21,21 @@ def generate_launch_description():
     
     # Paths
     world_file = os.path.join(pkg_share, 'worlds', 'house.sdf')
+    world_no_human_file = os.path.join(pkg_share, 'worlds', 'house_no_human.sdf')
     urdf_file = os.path.join(pkg_share, 'urdf', 'custom_robot.urdf')
     
     # Declare launch arguments
+    human_arg = DeclareLaunchArgument(
+        'human',
+        default_value='true',
+        description='Whether to include the human model in the simulation'
+    )
+
     world_arg = DeclareLaunchArgument(
         'world',
-        default_value=world_file,
+        default_value=PythonExpression([
+            "'" + world_file + "' if '" , LaunchConfiguration('human') , "' == 'true' else '" + world_no_human_file + "'"
+        ]),
         description='Path to the SDF world file to load'
     )
     
@@ -230,6 +239,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         set_gz_resource_path,
+        human_arg,
         world_arg,
         headless_arg,
         slam_arg,
