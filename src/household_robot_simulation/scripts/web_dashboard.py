@@ -743,38 +743,131 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       color: var(--cyan);
     }
 
-    /* TELEOP D-PAD */
-    .dpad-container {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      max-width: 220px;
-      margin: 0 auto;
+    /* MINIMAL TELEOP CONTROLLER */
+    .teleop-minimal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.3rem 0;
     }
 
-    .dpad-btn {
-      background: rgba(255, 255, 255, 0.05);
+    .dpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(3, 46px);
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dpad-cell {
+      width: 46px;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-card);
       color: var(--text-primary);
-      height: 48px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      cursor: pointer;
+      border-radius: 10px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+
+    .dpad-cell .dpad-sym {
+      font-size: 1rem;
+      line-height: 1;
+      color: var(--cyan);
+    }
+
+    .dpad-cell .dpad-sub {
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .dpad-cell:hover {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--cyan);
+      transform: translateY(-1px);
+    }
+
+    .dpad-cell:active, .dpad-cell.active-key {
+      background: var(--cyan);
+      border-color: var(--cyan);
+      transform: scale(0.93);
+    }
+
+    .dpad-cell:active .dpad-sym, .dpad-cell.active-key .dpad-sym,
+    .dpad-cell:active .dpad-sub, .dpad-cell.active-key .dpad-sub {
+      color: #000;
+    }
+
+    .dpad-cell.stop-cell {
+      background: rgba(244, 63, 94, 0.08);
+      border-color: rgba(244, 63, 94, 0.25);
+    }
+
+    .dpad-cell.stop-cell .dpad-sym {
+      color: var(--rose);
+      font-size: 0.85rem;
+    }
+
+    .dpad-cell.stop-cell:hover {
+      background: var(--rose);
+      border-color: var(--rose);
+    }
+
+    .dpad-cell.stop-cell:hover .dpad-sym,
+    .dpad-cell.stop-cell:hover .dpad-sub,
+    .dpad-cell.stop-cell:active .dpad-sym,
+    .dpad-cell.stop-cell:active .dpad-sub,
+    .dpad-cell.stop-cell.active-key .dpad-sym,
+    .dpad-cell.stop-cell.active-key .dpad-sub {
+      color: #fff;
+    }
+
+    .dpad-cell.stop-cell:active, .dpad-cell.stop-cell.active-key {
+      background: var(--rose);
+      border-color: var(--rose);
+      transform: scale(0.92);
+    }
+
+    .speed-pills-minimal {
+      display: flex;
+      gap: 0.35rem;
+      width: 100%;
+      max-width: 220px;
+    }
+
+    .speed-pill-min {
+      flex: 1;
+      padding: 0.3rem 0;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: center;
       transition: all 0.15s;
     }
 
-    .dpad-btn:hover {
-      background: var(--cyan);
-      color: #000;
-      box-shadow: 0 0 12px var(--cyan-glow);
+    .speed-pill-min:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
     }
 
-    .dpad-btn:active {
-      transform: scale(0.92);
+    .speed-pill-min.active {
+      background: rgba(6, 182, 212, 0.12);
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
 
     /* VOICE COMMAND BAR */
@@ -991,20 +1084,56 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- COLUMN 3: TELEOP CONTROLLER & VOICE COMMANDS -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">🕹️ Manual Teleop Driving</div>
-        <span style="font-size: 0.7rem; color: var(--text-muted);">(WASD supported)</span>
+        <div class="card-title">🕹️ Manual Teleop</div>
+        <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">WASD</span>
       </div>
 
-      <div class="dpad-container">
-        <div></div>
-        <button class="dpad-btn" onmousedown="startDrive(0.3, 0)" onmouseup="stopDrive()" ontouchstart="startDrive(0.3, 0)" ontouchend="stopDrive()">▲</button>
-        <div></div>
-        <button class="dpad-btn" onmousedown="startDrive(0, 0.6)" onmouseup="stopDrive()" ontouchstart="startDrive(0, 0.6)" ontouchend="stopDrive()">◀</button>
-        <button class="dpad-btn" onclick="stopDrive()" style="background: rgba(244, 63, 94, 0.2); color: var(--rose);">■</button>
-        <button class="dpad-btn" onmousedown="startDrive(0, -0.6)" onmouseup="stopDrive()" ontouchstart="startDrive(0, -0.6)" ontouchend="stopDrive()">▶</button>
-        <div></div>
-        <button class="dpad-btn" onmousedown="startDrive(-0.3, 0)" onmouseup="stopDrive()" ontouchstart="startDrive(-0.3, 0)" ontouchend="stopDrive()">▼</button>
-        <div></div>
+      <div class="teleop-minimal">
+        <div class="dpad-grid">
+          <div></div>
+          <button id="btnUp" class="dpad-cell" 
+            onmousedown="startDrive(1, 0, 'btnUp')" onmouseup="stopDrive()" 
+            ontouchstart="startDrive(1, 0, 'btnUp')" ontouchend="stopDrive()" title="Forward (W / ↑)">
+            <span class="dpad-sym">▲</span>
+            <span class="dpad-sub">W</span>
+          </button>
+          <div></div>
+
+          <button id="btnLeft" class="dpad-cell" 
+            onmousedown="startDrive(0, 1, 'btnLeft')" onmouseup="stopDrive()" 
+            ontouchstart="startDrive(0, 1, 'btnLeft')" ontouchend="stopDrive()" title="Left (A / ←)">
+            <span class="dpad-sym">◀</span>
+            <span class="dpad-sub">A</span>
+          </button>
+          
+          <button id="btnStop" class="dpad-cell stop-cell" 
+            onclick="stopDrive()" title="Stop (Space)">
+            <span class="dpad-sym">■</span>
+            <span class="dpad-sub">SPACE</span>
+          </button>
+
+          <button id="btnRight" class="dpad-cell" 
+            onmousedown="startDrive(0, -1, 'btnRight')" onmouseup="stopDrive()" 
+            ontouchstart="startDrive(0, -1, 'btnRight')" ontouchend="stopDrive()" title="Right (D / →)">
+            <span class="dpad-sym">▶</span>
+            <span class="dpad-sub">D</span>
+          </button>
+
+          <div></div>
+          <button id="btnDown" class="dpad-cell" 
+            onmousedown="startDrive(-1, 0, 'btnDown')" onmouseup="stopDrive()" 
+            ontouchstart="startDrive(-1, 0, 'btnDown')" ontouchend="stopDrive()" title="Reverse (S / ↓)">
+            <span class="dpad-sym">▼</span>
+            <span class="dpad-sub">S</span>
+          </button>
+          <div></div>
+        </div>
+
+        <div class="speed-pills-minimal">
+          <div class="speed-pill-min" onclick="setSpeedPreset(0.20, 0.45, this)">0.20 m/s</div>
+          <div class="speed-pill-min active" onclick="setSpeedPreset(0.35, 0.65, this)">0.35 m/s</div>
+          <div class="speed-pill-min" onclick="setSpeedPreset(0.60, 1.00, this)">0.60 m/s</div>
+        </div>
       </div>
 
       <div class="card-header" style="margin-top: 0.5rem;">
@@ -1083,7 +1212,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
-    // Teleop Driving
+    // Teleop Driving Logic
+    let currentLinearSpeed = 0.35;
+    let currentAngularSpeed = 0.65;
+
+    function setSpeedPreset(linear, angular, el) {
+      currentLinearSpeed = linear;
+      currentAngularSpeed = angular;
+      document.querySelectorAll('.speed-pill-min').forEach(p => p.classList.remove('active'));
+      if (el) el.classList.add('active');
+    }
+
     function sendTeleop(linear, angular) {
       fetch('/api/teleop', {
         method: 'POST',
@@ -1092,10 +1231,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       }).catch(err => console.error(err));
     }
 
-    function startDrive(linear, angular) {
+    function startDrive(linearFactor, angularFactor, keyId) {
       stopDrive();
-      sendTeleop(linear, angular);
-      driveInterval = setInterval(() => sendTeleop(linear, angular), 100);
+      if (keyId) {
+        const btn = document.getElementById(keyId);
+        if (btn) btn.classList.add('active-key');
+      }
+      const lin = linearFactor * currentLinearSpeed;
+      const ang = angularFactor * currentAngularSpeed;
+      sendTeleop(lin, ang);
+      driveInterval = setInterval(() => {
+        sendTeleop(lin, ang);
+      }, 100);
     }
 
     function stopDrive() {
@@ -1103,23 +1250,47 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         clearInterval(driveInterval);
         driveInterval = null;
       }
+      document.querySelectorAll('.dpad-cell').forEach(b => b.classList.remove('active-key'));
       sendTeleop(0, 0);
     }
 
-    // Keyboard WASD Controls
+    function updateTeleopStatus(lin, ang) {
+      const lblLin = document.getElementById('teleopLinDisplay');
+      const lblAng = document.getElementById('teleopAngDisplay');
+      const badgeLin = document.getElementById('teleopLinBadge');
+      const badgeAng = document.getElementById('teleopAngBadge');
+
+      if (lblLin) lblLin.innerText = `Vx: ${lin.toFixed(2)} m/s`;
+      if (lblAng) lblAng.innerText = `Wz: ${ang.toFixed(2)} rad/s`;
+
+      if (badgeLin) {
+        if (Math.abs(lin) > 0.01) badgeLin.classList.add('active');
+        else badgeLin.classList.remove('active');
+      }
+      if (badgeAng) {
+        if (Math.abs(ang) > 0.01) badgeAng.classList.add('active');
+        else badgeAng.classList.remove('active');
+      }
+    }
+
+    // Keyboard WASD Controls with interactive key glows
     window.addEventListener('keydown', (e) => {
       if (document.activeElement === document.getElementById('cmdInput')) return;
       if (e.repeat) return;
-      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') startDrive(0.35, 0);
-      else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') startDrive(-0.35, 0);
-      else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') startDrive(0, 0.65);
-      else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') startDrive(0, -0.65);
-      else if (e.key === ' ') stopDrive();
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') startDrive(1, 0, 'btnUp');
+      else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') startDrive(-1, 0, 'btnDown');
+      else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') startDrive(0, 1, 'btnLeft');
+      else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') startDrive(0, -1, 'btnRight');
+      else if (e.key === ' ') {
+        stopDrive();
+        const btnStop = document.getElementById('btnStop');
+        if (btnStop) btnStop.classList.add('active-key');
+      }
     });
 
     window.addEventListener('keyup', (e) => {
       if (document.activeElement === document.getElementById('cmdInput')) return;
-      if (['w', 's', 'a', 'd', 'W', 'S', 'A', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      if (['w', 's', 'a', 'd', 'W', 'S', 'A', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         stopDrive();
       }
     });

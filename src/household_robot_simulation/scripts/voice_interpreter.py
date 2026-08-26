@@ -581,7 +581,7 @@ def main(args=None):
     node = VoiceInterpreter()
     try:
         rclpy.spin(node)
-    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException):
+    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException, Exception):
         pass
     finally:
         node.destroy_node()
