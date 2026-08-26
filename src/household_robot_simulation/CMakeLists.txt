@@ -66,6 +66,7 @@ install(
     scripts/voice_interpreter.py
     scripts/voice_simulator_cli.py
     scripts/save_location.py
+    scripts/web_dashboard.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

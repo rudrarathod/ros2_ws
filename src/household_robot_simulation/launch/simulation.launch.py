@@ -144,6 +144,13 @@ def generate_launch_description():
         description='Whether to run the person follower node'
     )
     
+    # Declare launch argument for enabling Web Dashboard
+    dashboard_arg = DeclareLaunchArgument(
+        'dashboard',
+        default_value='true',
+        description='Whether to run the Web Dashboard & Control Center'
+    )
+    
     # Path to SLAM config
     slam_config = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
 
@@ -236,6 +243,15 @@ def generate_launch_description():
         output='screen',
         parameters=[{'use_sim_time': True}]
     )
+
+    # Web Dashboard Node (Flask + ROS 2 Telemetry & Video Stream)
+    web_dashboard = Node(
+        package='household_robot_simulation',
+        executable='web_dashboard.py',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('dashboard'))
+    )
     
     return LaunchDescription([
         set_gz_resource_path,
@@ -247,6 +263,7 @@ def generate_launch_description():
         vision_arg,
         yolo_arg,
         follow_arg,
+        dashboard_arg,
         gz_sim,
         robot_state_publisher,
         spawn_robot,
@@ -258,6 +275,7 @@ def generate_launch_description():
         yolo_detector,
         person_follower,
         voice_interpreter,
+        web_dashboard,
         slam_toolbox,
         navigation
     ])

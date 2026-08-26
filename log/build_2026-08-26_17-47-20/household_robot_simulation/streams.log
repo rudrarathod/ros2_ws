@@ -1,0 +1,50 @@
+[0.092s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/rudrarathod/ros2_ws/build/household_robot_simulation -- -j8 -l8
+[0.436s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/rudrarathod/ros2_ws/build/household_robot_simulation -- -j8 -l8
+[0.530s] Invoking command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/rudrarathod/ros2_ws/build/household_robot_simulation
+[0.573s] -- Install configuration: ""
+[0.573s] -- Execute custom install script
+[0.577s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/navigation.launch.py
+[0.579s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/launch/simulation.launch.py
+[0.581s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house.sdf
+[0.586s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/worlds/house_no_human.sdf
+[0.590s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/urdf/custom_robot.urdf
+[0.590s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/rviz/robot.rviz
+[0.592s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/bridge_config.yaml
+[0.594s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/ekf.yaml
+[0.595s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/nav2_params.yaml
+[0.595s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/semantic_locations.yaml
+[0.599s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/config/slam_toolbox_params.yaml
+[0.606s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/maps/house_map.pgm
+[0.609s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/maps/house_map.yaml
+[0.611s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/materials/textures/face.jpg
+[0.611s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/materials/textures/qr.png
+[0.613s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/house/meshes/house.glb
+[0.614s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov5n.onnx
+[0.615s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov8n_openvino_model/metadata.yaml
+[0.620s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov8n_openvino_model/yolov8n.bin
+[0.621s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/models/yolov8n_openvino_model/yolov8n.xml
+[0.621s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/teleop_keyboard.py
+[0.621s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/cmd_vel_safety_filter.py
+[0.621s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/vision_processor.py
+[0.622s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/yolo_detector.py
+[0.624s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/person_follower.py
+[0.624s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/voice_interpreter.py
+[0.624s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/voice_simulator_cli.py
+[0.625s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/save_location.py
+[0.625s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/lib/household_robot_simulation/web_dashboard.py
+[0.627s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/package_run_dependencies/household_robot_simulation
+[0.628s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/parent_prefix_path/household_robot_simulation
+[0.629s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.sh
+[0.631s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/ament_prefix_path.dsv
+[0.632s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.sh
+[0.639s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/environment/path.dsv
+[0.639s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.bash
+[0.639s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.sh
+[0.640s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.zsh
+[0.642s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/local_setup.dsv
+[0.643s] -- Symlinking: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.dsv
+[0.698s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/ament_index/resource_index/packages/household_robot_simulation
+[0.698s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig.cmake
+[0.699s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/cmake/household_robot_simulationConfig-version.cmake
+[0.699s] -- Up-to-date symlink: /home/rudrarathod/ros2_ws/install/household_robot_simulation/share/household_robot_simulation/package.xml
+[0.708s] Invoked command in '/home/rudrarathod/ros2_ws/build/household_robot_simulation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/rudrarathod/ros2_ws/build/household_robot_simulation
