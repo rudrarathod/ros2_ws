@@ -112,14 +112,14 @@ def generate_launch_description():
     # Declare launch argument for enabling SLAM
     slam_arg = DeclareLaunchArgument(
         'slam',
-        default_value='true',
+        default_value='false',
         description='Whether to run SLAM (slam_toolbox)'
     )
     
     # Declare launch argument for enabling navigation
     nav_arg = DeclareLaunchArgument(
         'nav',
-        default_value='false',
+        default_value='true',
         description='Whether to run autonomous navigation (Nav2)'
     )
     
