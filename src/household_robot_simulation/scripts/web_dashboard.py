@@ -29,6 +29,8 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image, LaserScan
 
 import subprocess
+import base64
+import yaml
 from flask import Flask, Response, jsonify, request, render_template_string
 
 # Try importing speech_recognition
@@ -46,6 +48,91 @@ except ImportError:
 
 # Initialize Flask App
 app = Flask(__name__)
+
+# 2D House Map Cache
+map_metadata_cache = {
+    "has_map": False,
+    "image_base64": "",
+    "width": 199,
+    "height": 159,
+    "resolution": 0.05,
+    "origin_x": -4.971,
+    "origin_y": -3.979,
+    "locations": {}
+}
+
+def load_map_asset():
+    global map_metadata_cache
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        try:
+            pkg_share = get_package_share_directory('household_robot_simulation')
+            yaml_path = os.path.join(pkg_share, 'maps', 'house_map.yaml')
+            sem_path = os.path.join(pkg_share, 'config', 'semantic_locations.yaml')
+        except Exception:
+            yaml_path = os.path.realpath('src/household_robot_simulation/maps/house_map.yaml')
+            sem_path = os.path.realpath('src/household_robot_simulation/config/semantic_locations.yaml')
+
+        if not os.path.exists(yaml_path):
+            yaml_path = os.path.realpath('src/household_robot_simulation/maps/house_map.yaml')
+        if not os.path.exists(sem_path):
+            sem_path = os.path.realpath('src/household_robot_simulation/config/semantic_locations.yaml')
+
+        if os.path.exists(yaml_path):
+            with open(yaml_path, 'r') as f:
+                meta = yaml.safe_load(f)
+
+            pgm_path = os.path.join(os.path.dirname(yaml_path), meta['image'])
+            img = cv2.imread(pgm_path, cv2.IMREAD_GRAYSCALE)
+            if img is not None:
+                h, w = img.shape
+                # Colorize map into a high-contrast dark-mode blueprint:
+                # 254 (free space) -> dark slate floor (22, 32, 50)
+                # 0 (obstacles/walls) -> bright glowing cyan/blue walls (56, 189, 248)
+                # 205 (unknown) -> deep stealth black (9, 13, 22)
+                rgba = np.zeros((h, w, 4), dtype=np.uint8)
+                rgba[img == 205] = [9, 13, 22, 255]
+                rgba[img >= 250] = [22, 32, 50, 255]
+                rgba[img < 50] = [56, 189, 248, 255]
+                rgba[(img >= 50) & (img < 205)] = [30, 58, 95, 255]
+
+                _, buffer = cv2.imencode('.png', rgba)
+                b64_str = base64.b64encode(buffer).decode('utf-8')
+
+                locations = {}
+                if os.path.exists(sem_path):
+                    with open(sem_path, 'r') as f:
+                        sem_data = yaml.safe_load(f) or {}
+                        for key, val in sem_data.get('locations', {}).items():
+                            icon = "📍"
+                            if "kitchen" in key: icon = "🍳"
+                            elif "bedroom" in key: icon = "🛏️"
+                            elif "living" in key: icon = "🛋️"
+                            elif "charg" in key or "start" in key: icon = "⚡"
+                            elif "water" in key or "counter" in key: icon = "💧"
+                            elif "medicine" in key: icon = "💊"
+                            locations[key] = {
+                                "x": float(val.get("x", 0.0)),
+                                "y": float(val.get("y", 0.0)),
+                                "yaw": float(val.get("yaw", 0.0)),
+                                "label": key.replace('_', ' ').title(),
+                                "icon": icon
+                            }
+
+                map_metadata_cache = {
+                    "has_map": True,
+                    "image_base64": f"data:image/png;base64,{b64_str}",
+                    "width": int(w),
+                    "height": int(h),
+                    "resolution": float(meta.get('resolution', 0.05)),
+                    "origin_x": float(meta.get('origin', [-4.971, -3.979, 0])[0]),
+                    "origin_y": float(meta.get('origin', [-4.971, -3.979, 0])[1]),
+                    "locations": locations
+                }
+    except Exception as e:
+        print("Failed to load 2D map asset:", e)
+
+load_map_asset()
 
 # Shared Robot State Store
 robot_state = {
@@ -239,6 +326,11 @@ def index():
 @app.route('/api/status')
 def get_status():
     return jsonify(robot_state)
+
+
+@app.route('/api/map_data')
+def get_map_data():
+    return jsonify(map_metadata_cache)
 
 
 @app.route('/api/command', methods=['POST'])
@@ -919,12 +1011,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     /* 2D MAP CANVAS */
+    .map-container {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-card);
+      background: #090d16;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
+    }
+
     #mapCanvas {
       width: 100%;
-      height: 180px;
-      background: #060911;
-      border-radius: 12px;
+      height: 200px;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .map-hud-overlay {
+      position: absolute;
+      bottom: 6px;
+      left: 8px;
+      background: rgba(9, 13, 22, 0.85);
       border: 1px solid var(--border-card);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--cyan);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
     }
 
     /* LOGS CONSOLE */
@@ -956,9 +1072,130 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .log-item.COMMAND { color: var(--cyan); }
     .log-item.SYSTEM { color: var(--emerald); }
     .log-item.INFO { color: var(--text-secondary); }
+
+    /* TOAST NOTIFICATION CONTAINER */
+    #toastContainer {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      max-width: 360px;
+      width: calc(100% - 40px);
+    }
+
+    .toast-msg {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(6, 182, 212, 0.1);
+      position: relative;
+      overflow: hidden;
+      transform: translateX(120%);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toast-msg.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast-msg.hide {
+      transform: translateX(120%);
+      opacity: 0;
+    }
+
+    .toast-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .toast-content {
+      flex: 1;
+      font-size: 0.82rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .toast-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px;
+      transition: color 0.15s;
+    }
+
+    .toast-close:hover {
+      color: white;
+    }
+
+    /* Toast Variations */
+    .toast-msg.info {
+      border-left: 4px solid var(--cyan);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px var(--cyan-glow);
+    }
+    .toast-msg.info .toast-title { color: var(--cyan); }
+
+    .toast-msg.success {
+      border-left: 4px solid var(--emerald);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px var(--emerald-glow);
+    }
+    .toast-msg.success .toast-title { color: var(--emerald); }
+
+    .toast-msg.warning {
+      border-left: 4px solid var(--amber);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+    .toast-msg.warning .toast-title { color: var(--amber); }
+
+    .toast-msg.danger, .toast-msg.error {
+      border-left: 4px solid var(--rose);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px var(--rose-glow);
+    }
+    .toast-msg.danger .toast-title, .toast-msg.error .toast-title { color: var(--rose); }
+
+    .toast-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--cyan);
+      width: 100%;
+      transition: width linear;
+    }
+    .toast-msg.success .toast-progress { background: var(--emerald); }
+    .toast-msg.warning .toast-progress { background: var(--amber); }
+    .toast-msg.danger .toast-progress, .toast-msg.error .toast-progress { background: var(--rose); }
   </style>
 </head>
 <body>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer"></div>
 
   <!-- EMERGENCY ALARM BANNER -->
   <div id="alarmBanner">
@@ -1148,9 +1385,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
       <!-- 2D FLOORPLAN MAP -->
       <div class="card-header" style="margin-top: 0.5rem;">
-        <div class="card-title">🗺️ House Map Pose</div>
+        <div class="card-title">🗺️ Real-Time 2D House Map</div>
+        <span style="font-size: 0.68rem; color: var(--cyan); font-weight: 600;">Live Pose</span>
       </div>
-      <canvas id="mapCanvas" width="300" height="180"></canvas>
+      <div class="map-container">
+        <canvas id="mapCanvas" width="318" height="254"></canvas>
+        <div class="map-hud-overlay" id="mapHud">X: 0.00m · Y: 0.00m · 0.0°</div>
+      </div>
 
       <!-- LOG CONSOLE -->
       <div class="card-header" style="margin-top: 0.5rem;">
@@ -1167,6 +1408,56 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     let recognition = null;
     let isListening = false;
 
+    // Toast Notification System
+    function showToast(message, type = 'info', icon = null, title = null, duration = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast-msg ${type}`;
+
+      if (!icon) {
+        if (type === 'success') icon = '✅';
+        else if (type === 'warning') icon = '⚠️';
+        else if (type === 'danger' || type === 'error') icon = '🚨';
+        else icon = '🤖';
+      }
+
+      if (!title) {
+        if (type === 'success') title = 'Success';
+        else if (type === 'warning') title = 'Warning';
+        else if (type === 'danger' || type === 'error') title = 'Alert';
+        else title = 'Notification';
+      }
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div>${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+        <div class="toast-progress"></div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('show');
+        const progress = toast.querySelector('.toast-progress');
+        if (progress) {
+          progress.style.transition = `width ${duration}ms linear`;
+          progress.style.width = '0%';
+        }
+      }, 20);
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 400);
+      }, duration);
+    }
+
     // Switch video stream between RAW and AI PROCESSED
     function switchStream(type) {
       currentStream = type;
@@ -1180,16 +1471,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         badge.innerHTML = '<span>🧠</span> AI VISION';
         btnRaw.classList.remove('active');
         btnProc.classList.add('active');
+        showToast("Switched to AI Vision stream with YOLO object detections", "info", "🧠", "Camera Feed");
       } else {
         img.src = '/video_feed?type=raw';
         badge.innerHTML = '<span>📹</span> RAW STREAM';
         btnProc.classList.remove('active');
         btnRaw.classList.add('active');
+        showToast("Switched to Live Raw Camera stream", "info", "📹", "Camera Feed");
       }
     }
 
     // Send Voice / Action Command
     function sendCommand(cmdText) {
+      const isEmergency = cmdText.toLowerCase() === 'stop';
+      if (isEmergency) {
+        showToast("Emergency Stop dispatched! Halting robot.", "danger", "🚨", "Emergency Stop", 4000);
+      } else {
+        showToast(`Dispatched command: "${cmdText}"`, "success", "🚀", "Command Sent");
+      }
+
       fetch('/api/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1197,10 +1497,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       })
       .then(res => res.json())
       .then(data => {
-        // Speak in browser TTS as vocal acknowledgment
         speakFeedback(cmdText);
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        showToast("Failed to send command: " + err, "danger", "⚠️", "Network Error");
+      });
     }
 
     function sendInputCmd() {
@@ -1221,6 +1523,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       currentAngularSpeed = angular;
       document.querySelectorAll('.speed-pill-min').forEach(p => p.classList.remove('active'));
       if (el) el.classList.add('active');
+      showToast(`Drive speed limit set to ${linear.toFixed(2)} m/s`, "info", "⚡", "Speed Preset");
     }
 
     function sendTeleop(linear, angular) {
@@ -1304,13 +1607,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
+    let lastAlarmState = false;
+
     // Web Speech API / Universal Microphone Recording
     function toggleMic() {
       const micBtn = document.getElementById('micBtn');
       const input = document.getElementById('cmdInput');
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-      // If browser supports Web Speech API (Chrome / Chromium / Edge / Safari)
       if (SpeechRecognition) {
         if (isListening) {
           try { recognition.stop(); } catch(e) {}
@@ -1325,17 +1629,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           isListening = true;
           micBtn.classList.add('listening');
           input.placeholder = "🎙️ Listening... speak your command now!";
+          showToast("Listening for speech... Speak now!", "info", "🎙️", "Voice Input", 3500);
         };
 
         recognition.onresult = (event) => {
           const transcript = event.results[0][0].transcript;
           input.value = transcript;
           input.placeholder = "e.g. 'go to kitchen', 'start patrol'";
+          showToast(`Recognized: "${transcript}"`, "success", "🎙️", "Voice Recognized");
           sendCommand(transcript);
         };
 
         recognition.onerror = (event) => {
-          console.warn("Client Speech Recognition unavailable, using server audio recording:", event.error);
+          console.warn("Client Speech Recognition error, using server fallback:", event.error);
           isListening = false;
           micBtn.classList.remove('listening');
           input.placeholder = "e.g. 'go to kitchen', 'start patrol'";
@@ -1354,7 +1660,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           fallbackServerVoiceRecord();
         }
       } else {
-        // Mozilla Firefox, Zen Browser, Librewolf, or unsupported client: Server-side Microphone Recording
         fallbackServerVoiceRecord();
       }
     }
@@ -1368,6 +1673,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       isListening = true;
       micBtn.classList.add('listening');
       input.placeholder = "🎙️ Listening for 4s... (Speak now!)";
+      showToast("Recording audio (4s)... Speak your command now!", "info", "🎙️", "Microphone Active", 4000);
 
       fetch('/api/voice_record', { method: 'POST' })
         .then(res => res.json())
@@ -1377,9 +1683,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           input.placeholder = "e.g. 'go to kitchen', 'start patrol'";
           if (data.status === 'success' && data.transcript) {
             input.value = data.transcript;
+            showToast(`Voice Transcribed: "${data.transcript}"`, "success", "🎙️", "Voice Command");
             speakFeedback(data.transcript);
           } else if (data.message) {
-            alert("Voice detection: " + data.message);
+            showToast(data.message, "warning", "⚠️", "Voice Detection");
           }
         })
         .catch(err => {
@@ -1387,66 +1694,181 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           isListening = false;
           micBtn.classList.remove('listening');
           input.placeholder = "e.g. 'go to kitchen', 'start patrol'";
-          alert("Microphone recording error: " + err);
+          showToast("Microphone recording failed: " + err, "danger", "⚠️", "Voice Error");
         });
     }
 
-    // 2D Canvas Map Drawing
-    function drawMap(x, y, yawDeg) {
+    // Real-Time 2D Map Rendering
+    let mapData = null;
+    let mapImg = null;
+    let robotTrail = [];
+
+    function initMap() {
+      fetch('/api/map_data')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.has_map) {
+            mapData = data;
+            mapImg = new Image();
+            mapImg.onload = () => {
+              drawMap(0, 0, 0);
+            };
+            mapImg.src = data.image_base64;
+          }
+        })
+        .catch(err => console.error("Error loading map:", err));
+    }
+
+    initMap();
+
+    // Map click navigation
+    document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('mapCanvas');
+      if (canvas) {
+        canvas.addEventListener('click', (e) => {
+          if (!mapData) return;
+          const rect = canvas.getBoundingClientRect();
+          const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+          const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+          const scaleX = canvas.width / mapData.width;
+          const scaleY = canvas.height / mapData.height;
+
+          const mx = cx / scaleX;
+          const my = cy / scaleY;
+          const wx = mx * mapData.resolution + mapData.origin_x;
+          const wy = (mapData.height - 1 - my) * mapData.resolution + mapData.origin_y;
+
+          let nearestRoom = null;
+          let minD = 1.3;
+          if (mapData.locations) {
+            for (const [key, loc] of Object.entries(mapData.locations)) {
+              const d = Math.hypot(loc.x - wx, loc.y - wy);
+              if (d < minD) {
+                minD = d;
+                nearestRoom = key;
+              }
+            }
+          }
+
+          if (nearestRoom) {
+            showToast(`Navigating to ${nearestRoom.replace('_', ' ').toUpperCase()}...`, "info", "🗺️", "Map Navigation");
+            sendCommand(`go to ${nearestRoom.replace('_', ' ')}`);
+          }
+        });
+      }
+    });
+
+    function drawMap(robotX, robotY, robotYaw) {
+      const canvas = document.getElementById('mapCanvas');
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.width;
       const h = canvas.height;
 
       ctx.clearRect(0, 0, w, h);
 
-      // Floor boundary
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(15, 15, w - 30, h - 30);
+      if (!mapData || !mapImg || !mapImg.complete) {
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, w, h);
+        ctx.font = '11px Inter';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading 2D House Map...', w / 2, h / 2);
+        return;
+      }
 
-      // Room Partitions
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      // 1. Draw Real 2D Blueprint Map Image
+      ctx.drawImage(mapImg, 0, 0, w, h);
+
+      const scaleX = w / mapData.width;
+      const scaleY = h / mapData.height;
+
+      function worldToCanvas(wx, wy) {
+        const mx = (wx - mapData.origin_x) / mapData.resolution;
+        const my = (mapData.height - 1) - (wy - mapData.origin_y) / mapData.resolution;
+        return { x: mx * scaleX, y: my * scaleY };
+      }
+
+      // 2. Draw Semantic Room Waypoint Markers
+      if (mapData.locations) {
+        for (const [key, loc] of Object.entries(mapData.locations)) {
+          if (key === 'kitchen_counter' || key === 'medicine_cabinet' || key === 'start') continue;
+          const pos = worldToCanvas(loc.x, loc.y);
+
+          // Room Marker Dot
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+          ctx.shadowBlur = 4;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Room Label & Icon
+          ctx.font = 'bold 9px Inter';
+          ctx.fillStyle = '#e2e8f0';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${loc.icon} ${loc.label}`, pos.x, pos.y - 7);
+        }
+      }
+
+      // 3. Draw Robot Movement Trail (Breadcrumbs)
+      const curPos = worldToCanvas(robotX, robotY);
+      if (robotTrail.length === 0 || Math.hypot(robotTrail[robotTrail.length - 1].x - curPos.x, robotTrail[robotTrail.length - 1].y - curPos.y) > 2) {
+        robotTrail.push(curPos);
+        if (robotTrail.length > 60) robotTrail.shift();
+      }
+
+      if (robotTrail.length > 1) {
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.35)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(robotTrail[0].x, robotTrail[0].y);
+        for (let i = 1; i < robotTrail.length; i++) {
+          ctx.lineTo(robotTrail[i].x, robotTrail[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // 4. Draw Robot Pose & Heading Indicator
+      ctx.save();
+      ctx.translate(curPos.x, curPos.y);
+
+      const yawRad = (robotYaw * Math.PI) / 180;
+      ctx.rotate(-yawRad);
+
+      // Radar Ripple
       ctx.beginPath();
-      ctx.moveTo(w / 2, 15); ctx.lineTo(w / 2, h - 15);
-      ctx.moveTo(15, h / 2); ctx.lineTo(w - 15, h / 2);
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.45)';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // Room Labels
-      ctx.font = '10px Inter';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.fillText('🍳 KITCHEN', 25, 32);
-      ctx.fillText('🛏️ BEDROOM', w / 2 + 15, 32);
-      ctx.fillText('🛋️ LIVING ROOM', 25, h / 2 + 22);
-      ctx.fillText('⚡ CHARGER', w / 2 + 15, h / 2 + 22);
-
-      // Convert world (X, Y) to canvas coords
-      // House is approx [-3.5, 3.5] in X, [-3.5, 3.5] in Y
-      const cx = (w / 2) + (y * 22);
-      const cy = (h / 2) - (x * 22);
-
-      // Draw Robot Marker
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((-yawDeg * Math.PI) / 180);
-
-      // Glow circle
+      // Robot Chassis Dot
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
       ctx.fillStyle = '#06b6d4';
       ctx.shadowColor = '#06b6d4';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.shadowBlur = 8;
       ctx.fill();
 
-      // Heading Arrow
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      // Heading Arrow Cone
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(12, 0);
-      ctx.stroke();
+      ctx.moveTo(9, 0);
+      ctx.lineTo(3, -4);
+      ctx.lineTo(3, 4);
+      ctx.closePath();
+      ctx.fill();
 
       ctx.restore();
+
+      // Update HUD Overlay
+      const hud = document.getElementById('mapHud');
+      if (hud) {
+        hud.innerText = `X: ${robotX.toFixed(2)}m · Y: ${robotY.toFixed(2)}m · ${robotYaw.toFixed(1)}°`;
+      }
     }
 
     // Periodic Telemetry Fetching
@@ -1478,13 +1900,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             batVal.style.color = 'var(--rose)';
           }
 
-          // Emergency Alarm Banner
+          // Emergency Alarm Banner & Toast
           const banner = document.getElementById('alarmBanner');
           if (data.emergency_alarm) {
             banner.style.display = 'flex';
+            if (!lastAlarmState) {
+              showToast("🚨 INTRUDER / OBSTACLE ALARM TRIGGERED!", "danger", "🚨", "Security Alert", 5000);
+            }
           } else {
             banner.style.display = 'none';
           }
+          lastAlarmState = data.emergency_alarm;
 
           // Draw Map
           drawMap(data.x, data.y, data.yaw);
@@ -1513,8 +1939,14 @@ def main(args=None):
     rclpy.init(args=args)
     dashboard_node = WebDashboardNode()
 
-    # Spin ROS 2 in background thread
-    ros_thread = threading.Thread(target=rclpy.spin, args=(dashboard_node,), daemon=True)
+    # Spin ROS 2 in background thread safely
+    def spin_node(node):
+        try:
+            rclpy.spin(node)
+        except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException, Exception):
+            pass
+
+    ros_thread = threading.Thread(target=spin_node, args=(dashboard_node,), daemon=True)
     ros_thread.start()
 
     # Run Flask Web Server on 0.0.0.0:5000
@@ -1524,7 +1956,7 @@ def main(args=None):
         print("  👉 Open in your browser: http://localhost:5000")
         print("=" * 60 + "\n")
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException):
+    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException, Exception):
         pass
     finally:
         if dashboard_node:
