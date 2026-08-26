@@ -91,8 +91,8 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.20
+      yaw_goal_tolerance: 3.14159  # No strict orientation required: destination reached in ANY direction
 
     FollowPath:
       plugin: "nav2_rotation_shim_controller::RotationShimController"

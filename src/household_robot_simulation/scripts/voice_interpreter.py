@@ -580,11 +580,12 @@ def main(args=None):
     node = VoiceInterpreter()
     try:
         rclpy.spin(node)
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

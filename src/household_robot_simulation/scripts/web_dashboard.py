@@ -1353,12 +1353,13 @@ def main(args=None):
         print("  👉 Open in your browser: http://localhost:5000")
         print("=" * 60 + "\n")
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException):
         pass
     finally:
         if dashboard_node:
             dashboard_node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
