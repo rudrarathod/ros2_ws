@@ -156,11 +156,12 @@ class VoiceInterpreter(Node):
             cls = d.get('class', '').lower()
             conf = d.get('confidence', 0.0)
 
-            # Security Patrol Feature: Intruder detection
+            # Security Patrol Feature: Intruder detection (require high confidence)
             if self.patrol_mode and cls in ["person", "human", "pedestrian"]:
-                self.stop_patrol(reason="Intruder Person Detected")
-                self.trigger_emergency_alarm(f"INTRUDER DETECTED! Unknown person spotted during patrol (Conf: {conf:.2f})")
-                return
+                if conf >= 0.50:
+                    self.stop_patrol(reason="Intruder Person Detected")
+                    self.trigger_emergency_alarm(f"INTRUDER DETECTED! Unknown person spotted during patrol (Conf: {conf:.2f})")
+                    return
 
             # Safety Hazard Detection: Dangerous objects
             if cls in ["knife", "scissors"]:

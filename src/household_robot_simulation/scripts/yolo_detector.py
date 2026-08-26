@@ -23,7 +23,7 @@ class YoloDetector(Node):
         self.bridge = CvBridge()
 
         # Declare parameters
-        self.declare_parameter('confidence_threshold', 0.25)
+        self.declare_parameter('confidence_threshold', 0.45)
         self.declare_parameter('frame_skip', 6)  # Process every Nth frame to save CPU
         self.declare_parameter('model_name', 'yolov8n.pt')
 
@@ -100,6 +100,15 @@ class YoloDetector(Node):
             # Bounding box coordinates
             bbox = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
             x1, y1, x2, y2 = [int(v) for v in bbox]
+
+            w = x2 - x1
+            h = y2 - y1
+
+            # Extra Human Body Validation:
+            # Prevent small floor objects (like bathtub feet or table legs) from registering as humans
+            if class_name in ['person', 'human', 'pedestrian']:
+                if h < 45 or conf < 0.50 or (h / max(1, w)) < 1.05:
+                    continue
 
             detections_list.append({
                 'class': class_name,

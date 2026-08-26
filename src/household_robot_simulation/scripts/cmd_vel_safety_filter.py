@@ -182,14 +182,14 @@ class CmdVelSafetyFilter(Node):
                 x = r * math.cos(angle)
                 y = r * math.sin(angle)
 
-                # Check bounding corridor
+                # Check bounding corridor (outside 0.20m chassis radius)
                 if forward:
-                    # Forward box: X in [0.15m, 0.28m], |Y| <= 0.16m
-                    if 0.15 <= x <= self.corridor_forward_dist and abs(y) <= self.corridor_half_width:
+                    # Forward box: X in [0.21m, 0.28m], |Y| <= 0.16m
+                    if 0.21 <= x <= self.corridor_forward_dist and abs(y) <= self.corridor_half_width:
                         return True
                 else:
-                    # Reverse box: X in [-0.28m, -0.15m], |Y| <= 0.16m
-                    if -self.corridor_forward_dist <= x <= -0.15 and abs(y) <= self.corridor_half_width:
+                    # Reverse box: X in [-0.28m, -0.21m], |Y| <= 0.16m
+                    if -self.corridor_forward_dist <= x <= -0.21 and abs(y) <= self.corridor_half_width:
                         return True
 
             angle += scan.angle_increment

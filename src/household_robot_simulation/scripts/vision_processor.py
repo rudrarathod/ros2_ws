@@ -226,10 +226,11 @@ class VisionProcessor(Node):
     def detect_yolo_objects(self, input_image):
         if self.yolo_model is None:
             return
+        # Set confidence threshold to 0.45 to prevent false positives on furniture/bathtub legs
         try:
-            results = self.yolo_model.predict(input_image, conf=0.15, verbose=False, device='intel:gpu')
+            results = self.yolo_model.predict(input_image, conf=0.45, verbose=False, device='intel:gpu')
         except Exception:
-            results = self.yolo_model.predict(input_image, conf=0.15, verbose=False, device='cpu')
+            results = self.yolo_model.predict(input_image, conf=0.45, verbose=False, device='cpu')
         result = results[0]
 
         detections_list = []
@@ -240,6 +241,16 @@ class VisionProcessor(Node):
             conf = float(box.conf[0])
             bbox = box.xyxy[0].tolist()
             x1, y1, x2, y2 = [int(v) for v in bbox]
+
+            w = x2 - x1
+            h = y2 - y1
+
+            # Extra Human Body Validation:
+            # Prevent small floor objects (like bathtub feet or table legs) from registering as humans
+            if class_name in ['person', 'human', 'pedestrian']:
+                # Real standing/sitting humans have height >= 45px, conf >= 0.50, and vertical aspect ratio (height > width)
+                if h < 45 or conf < 0.50 or (h / max(1, w)) < 1.05:
+                    continue
 
             detections_list.append({
                 'class': class_name,

@@ -93,7 +93,7 @@ class WebDashboardNode(Node):
         self.create_subscription(Image, '/camera/image_processed', self.processed_image_callback, 10)
         self.create_subscription(Float32, '/battery/percentage', self.battery_callback, 10)
         self.create_subscription(Bool, '/emergency/alarm', self.alarm_callback, 10)
-        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
+        self.create_subscription(Odometry, '/odometry/filtered', self.odom_callback, 10)
         self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
         self.create_subscription(String, '/voice/command', self.voice_command_callback, 10)
         self.create_subscription(String, '/person_follower/status', self.follower_status_callback, 10)

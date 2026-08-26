@@ -115,9 +115,17 @@ class PersonFollower(Node):
 
         for det in detections:
             if det.get('class') in ['person', 'human', 'pedestrian']:
+                conf = float(det.get('confidence', 0.0))
+                if conf < 0.45:
+                    continue
                 bbox = det.get('bbox', [0, 0, 0, 0])
                 x1, y1, x2, y2 = bbox
-                area = (x2 - x1) * (y2 - y1)
+                w = x2 - x1
+                h = y2 - y1
+                # Must be reasonably sized and vertical (human body shape)
+                if h < 45 or (h / max(1, w)) < 1.0:
+                    continue
+                area = w * h
                 if area > max_area:
                     max_area = area
                     best_person = det
